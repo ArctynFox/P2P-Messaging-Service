@@ -1,11 +1,11 @@
 # Functional Requirements/Attributes
 ## Clients
-- [ ] Clients should only need to communicate with a central server to find peers and facilitate hole-punching (or assume that all clients have a listening port forwarded[^1]).
+- [ ] Clients should only need to communicate with a central server to find peers and facilitate [hole-punching](https://github.com/KunjanThadani/holepunchsample/) (or assume that all clients have a listening port forwarded[^1]).
 - [ ] Messages between clients should *never* go through any sort of central or relay server.
 - [ ] All messages should be encrypted to facilitate secure transfer of data.
 - [ ] Clients should be able to pair with each other to start messaging via a user ID
 - [ ] For simplicity, users should be per-device, i.e. each client installation has a different user ID and messages do not sync between one person's devices if they use multiple.
-- [ ] Clients should attempt to contact the central server frequently to ensure the client's IP in the server's database is up-to-date
+- [ ] Clients should attempt to contact the central server frequently to ensure the client's IP in the server's database is up-to-date.
 - [ ] Clients should have a local database with multiple tables for user and message caching.
 	- [ ] One table for known user hashes, as well as a nickname for each user.
 	- [ ] One for messages which foreign key reference the known users table's ID column.
@@ -13,12 +13,18 @@
 ### Optional
 - [ ] Clients should be able to pair using a QR code or nearby device scanning.
 - [ ] Clients should be able to send small files or images to each other.
+- [ ] Clients get rid of cached messages after a user-defined amount of time.
+	- [ ] By definition requires adding a posted date column to the message tables.
 
 ## Server
 - [ ] The server should have a database with at least a table that holds a user ID and the corresponding IP.
 - [ ] The server should support multiple user connections at once to be scale-able (for testing purposes, 2-4 is sufficient).
 - [ ] The first time a new client connects, a new user hash should be generated and added to the user table, and then the hash should be sent back to the user.
 - [ ] The server should accept requests from clients to contact other clients and facilitate their attempt at connecting to each other via hole-punching.
+
+# Non-Functional Requirements/Attributes
+- [ ] Clients' local databases should use something lightweight such as SQLite
+- [ ] Server's database should use something more reliable like MySQL
 
 # Database Tables
 ## Clients
