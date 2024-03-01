@@ -55,14 +55,14 @@
 [^1]: If we go down this route, the user tables on the client side should also have the last-known IP for each client, so that peers can attempt to connect to each other without needing to check with a central server; then, if that fails, it can check with the central server to see if the IP of the user they are trying to connect to has changed.
 [^2]: For example, the following code:
 	```java
-protected String getSaltString() {
-	String SALTCHARS = "abcdefghijklmnopqrstuvwxyz1234567890";
-	StringBuilder salt = new StringBuilder();
-	SecureRandom rnd = new SecureRandom();
-	while (salt.length() < 32) { // length of the random string.
-		int index = (int) (rnd.nextFloat() * SALTCHARS.length());
-		salt.append(SALTCHARS.charAt(index));
+	protected String getSaltString() {
+		String SALTCHARS = "abcdefghijklmnopqrstuvwxyz1234567890";
+		StringBuilder salt = new StringBuilder();
+		SecureRandom rnd = new SecureRandom();
+		while (salt.length() < 32) { // length of the random string.
+			int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+			salt.append(SALTCHARS.charAt(index));
+		}
+		String saltStr = salt.toString();
+		return saltStr;
 	}
-	String saltStr = salt.toString();
-	return saltStr;
-}```
