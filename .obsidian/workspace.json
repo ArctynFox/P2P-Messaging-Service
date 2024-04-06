@@ -148,17 +148,18 @@
   },
   "active": "2383aef27f4bc21d",
   "lastOpenFiles": [
+    "server/bin/ClientConnectionThread.class",
+    "server/src/ClientConnectionThread.java",
+    "server/bin/App$1.class",
+    "server/README.md",
+    "README.md",
+    "New Text Document.txt",
     "server/src/App.java",
     "server/bin/App.class",
     "server/lib/mysql-connector-j-8.3.0.jar",
     "server/src",
-    "server/README.md",
     "server/bin",
     "server/lib",
-    "server",
-    "Server/lib/mysql-connector-j-8.3.0.jar",
-    "Server/lib",
-    "Server/New folder",
-    "Server/src/main/java/com/cs381/messaging_server/DatabaseConnection.java"
+    "server"
   ]
 }
