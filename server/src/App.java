@@ -42,6 +42,8 @@ public class App
         @Override
         public void run() {
             try {
+                //Modify the port on the following line if you wish to use a different one.
+                //This is the port that clients should be given to connect to a specific Mercury server group.
                 serverSocket = new ServerSocket(52761);
             } catch (IOException e) {
                 System.out.println("Could not open server socket. Please restart server.");
@@ -55,10 +57,12 @@ public class App
                 if(Thread.activeCount() < maxThreads) {
                     try {
                         System.out.println("Waiting for incoming connections...");
+                        //accept an incoming connection and print the client's address
                         Socket socket = serverSocket.accept();
 
                         System.out.println("Incoming connection from " + socket.getInetAddress().getHostAddress() + ", moving connecti0on to new thread.");
 
+                        //pass the client's socket to a new thread
                         ClientConnectionThread thread = new ClientConnectionThread(socket, db, Thread.activeCount());
                         thread.start();
                     } catch (IOException e) {

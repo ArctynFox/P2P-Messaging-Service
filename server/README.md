@@ -1,18 +1,11 @@
-## Getting Started
+# Central Server
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+This is the project for the central server for the messaging service. It handles only assigning user hashes and keeping track of their recent IPs, as well as facilitating P2P connections between clients. It's a standard Java project that doesn't use Maven or Gradle.
 
-## Folder Structure
+This should be modifiable such that anyone can create their own central server and use it separately, given that they port-forward it. In this way, there can still be some level of decentralization that allows any specific group of people to keep connections within their Mercury group private.
 
-The workspace contains two folders by default, where:
+## Build Instructions
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
-
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
-
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
-
-## Dependency Management
-
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+1. Install VSCode and add the Debugger for Java and Extension Pack for Java extensions.
+2. Install Temurin Java 17 LTS.
+3. Run App.java.
