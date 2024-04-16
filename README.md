@@ -23,8 +23,8 @@
 - [ ] The server should accept requests from clients to contact other clients and facilitate their attempt at connecting to each other via hole-punching.
 
 # Non-Functional Requirements/Attributes
-- [ ] Clients' local databases should use something lightweight such as SQLite
-- [ ] Server's database should use something more reliable like MySQL
+- [x] Clients' local databases should use something lightweight such as SQLite
+- [x] Server's database should use something more reliable like MySQL
 
 # Database Tables
 ## Clients

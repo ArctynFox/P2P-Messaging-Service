@@ -1,2 +1,10 @@
 server/bin
 /.obsidian
+/android_client/*.iml
+/android_client/.gradle
+/android_client/local.properties
+/android_client/.idea
+/android_client/build
+/android_client/captures
+/android_client/.externalNativeBuild
+/android_client/.cxx
