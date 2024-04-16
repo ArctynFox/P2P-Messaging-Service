@@ -148,6 +148,9 @@
   },
   "active": "2383aef27f4bc21d",
   "lastOpenFiles": [
+    "server/bin/GCMParameterSpec.class",
+    "server/src/GCMParameterSpec.java",
+    "android_client/app/src/main/java/com/cs496/mercurymessaging/networking",
     "pc_client/bin/App.class",
     "pc_client/bin",
     "pc_client/UI_Folder_MoveWhenReady/styling.html",
@@ -157,10 +160,7 @@
     "pc_client/src",
     "pc_client/lib",
     "pc_client/README.md",
-    "pc_client/pc_client/src/App.java",
-    "pc_client/pc_client/src",
     "pc_client/pc_client/README.md",
-    "pc_client/pc_client/lib",
     "server/README.md",
     "README.md",
     "server a/README.md"
