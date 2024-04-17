@@ -6,7 +6,7 @@
 
 /* text bubble details */
 .message {
-    background-color: #ccdcff; /* Background color of the text bubble */
+    background-color: #ccdcff; /* background color of the text bubble */
     padding: 8px 12px; /* padding to create space between the text and the bubble edge */
     border-radius: 8px; /* border radius to create rounded corners */
     margin-bottom: 15px; /* margin between messages */
