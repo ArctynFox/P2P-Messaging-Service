@@ -13,6 +13,8 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -26,6 +28,7 @@ public class ClientConnectionThread extends Thread {
     DataOutputStream out;
     BufferedReader in;
     Key aesKey;
+    String userHash;
     
 
     ClientConnectionThread(Socket socket, Connection db, int id) {
@@ -75,6 +78,41 @@ public class ClientConnectionThread extends Thread {
                 return;
             }
 
+            //receive the connected client's user hash
+            userHash = receive();
+
+            //if the user indicates that it has no hash, generate one for it and add a new user entry
+            if(userHash.equals("N/A")) {
+                String hash;
+
+                //generate random hashes until the hash generated is unique
+                while(true) {
+                    //generate a user hash
+                    hash = generateUserHash();
+                    //query the DB to see if a user with that hash exists
+                    PreparedStatement query = db.prepareStatement("SELECT COUNT(*) AS rowCount FROM users WHERE hash = ?");
+                    query.setString(1, hash);
+                    ResultSet results = query.executeQuery();
+                    results.next();
+                    //by getting the count of the results
+                    int size = results.getInt("rowCount");
+                    results.close();
+
+                    //if there is not a user with that hash, 
+                    if(size == 0) {
+                        break;
+                    }
+                }
+
+                //insert the new user and corresponding hash into the database
+                PreparedStatement insert = db.prepareStatement("INSERT INTO users(hash, ip) VALUES(?, ?)");
+                insert.setString(1, hash);
+                insert.setString(2, socket.getInetAddress().getHostAddress());
+                insert.execute();
+            } else {
+                //TODO: update the user's entry's IP address
+            }
+
             //keep listening to client until disconnected
             while(true) {
                 //switch statement that handles different actions that the client could request
@@ -82,9 +120,35 @@ public class ClientConnectionThread extends Thread {
                 String requestedAction = receive();
                 switch(requestedAction) {
                     //TODO: add necessary actions
-                    //case for if a new user has connected and needs a user ID hash
                     //case for when an existing user connects and needs to update their IP
+                    case "updateIP":
+                        //get the connected user's IP
+                        String newIP = receive();
+                        
+                        break;
                     //case for facilitating a p2p connection between two clients
+                    case "facilitateConnection":
+                        //receive the target user's hash from the connected client
+                        String targetHash = receive();
+
+                        //excute a prepared query to find the user with that hash
+                        PreparedStatement query = db.prepareStatement("SELECT FROM users WHERE hash = ?");
+                        query.setString(1, targetHash);
+                        ResultSet results = query.executeQuery();
+                        results.first();
+
+                        //send the IP string back to the connected client
+                        String targetIP = results.getString("IP");
+                        send(targetIP);
+                        //at this point, the client should attempt to start sending UDP packets to the target IP until it receives a response
+
+                        //figure out how to notify the target client that it needs to try to connect
+                        break;
+                    //case for when anything else is received
+                    default:
+                        print("Did not receive an expected message, disconnecting from client.");
+                        interrupt();
+                        break;
                 }
             
             }
@@ -109,6 +173,20 @@ public class ClientConnectionThread extends Thread {
             interrupt();
             return;
         }
+    }
+
+    //override the thread interrupt function to make sure the thread attempts to safe-close the socket and data streams
+    @Override
+    public void interrupt() {
+        try {
+            out.close();
+            in.close();
+            socket.close();
+        } catch (IOException e) {
+            print("Failed to close socket on interrupt, but it doesn't matter.");
+            e.printStackTrace();
+        }
+        super.interrupt();
     }
 
     //encrypt an AES key using an RSA key
