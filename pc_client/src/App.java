@@ -1,4 +1,7 @@
 import javax.swing.*;
+import java.awt.*;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 public class App {
     // Swing components for UI
@@ -6,6 +9,7 @@ public class App {
     static JTextArea chatArea;
     static JTextField messageField;
     static JButton sendButton;
+    static PrintWriter writer; // send data to the server
 
     public static void main(String[] args) throws Exception {
         // Initialize UI components
@@ -27,12 +31,20 @@ public class App {
 
         // Add action listener to send button
         sendButton.addActionListener(e -> sendMessage());
+
+        // Connect to the server
+        Socket socket = new Socket("IP_here", 52761); // Replace IP_here with IP address of the server machine
+
+        // Create a PrintWriter object for sending data to the server
+        writer = new PrintWriter(socket.getOutputStream(), true);
     }
 
     // Method to send message
-    private void sendMessage() {
+    private static void sendMessage() {
         String message = messageField.getText();
         // Send message to server
-        // You need to implement this part
+        writer.println(message);
+        messageField.setText(""); // Clear the message field after sending
     }
 }
+
