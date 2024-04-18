@@ -110,7 +110,11 @@ public class ClientConnectionThread extends Thread {
                 insert.setString(2, socket.getInetAddress().getHostAddress());
                 insert.execute();
             } else {
-                //TODO: update the user's entry's IP address
+                //update the user's entry's IP address
+                PreparedStatement update = db.prepareStatement("UPDATE users SET ip = ? WHERE hash = ?");
+                update.setString(1, socket.getInetAddress().getHostAddress());
+                update.setString(2, userHash);
+                update.executeUpdate();
             }
 
             //keep listening to client until disconnected
@@ -120,19 +124,13 @@ public class ClientConnectionThread extends Thread {
                 String requestedAction = receive();
                 switch(requestedAction) {
                     //TODO: add necessary actions
-                    //case for when an existing user connects and needs to update their IP
-                    case "updateIP":
-                        //get the connected user's IP
-                        String newIP = receive();
-                        
-                        break;
                     //case for facilitating a p2p connection between two clients
                     case "facilitateConnection":
                         //receive the target user's hash from the connected client
                         String targetHash = receive();
 
                         //excute a prepared query to find the user with that hash
-                        PreparedStatement query = db.prepareStatement("SELECT FROM users WHERE hash = ?");
+                        PreparedStatement query = db.prepareStatement("SELECT * FROM users WHERE hash = ?");
                         query.setString(1, targetHash);
                         ResultSet results = query.executeQuery();
                         results.first();
@@ -140,7 +138,7 @@ public class ClientConnectionThread extends Thread {
                         //send the IP string back to the connected client
                         String targetIP = results.getString("IP");
                         send(targetIP);
-                        //at this point, the client should attempt to start sending UDP packets to the target IP until it receives a response
+                        //at this point, the connected client should attempt to start sending UDP packets to the target IP until it receives a response (UDP hole punch)
 
                         //figure out how to notify the target client that it needs to try to connect
                         break;
@@ -283,6 +281,7 @@ public class ClientConnectionThread extends Thread {
         return hash;
     }
 
+    //adapter to shorthand a print statement and include the thread's ID
     void print(String message) {
         System.out.println("Thread " + threadID + ": " + message);
     }
