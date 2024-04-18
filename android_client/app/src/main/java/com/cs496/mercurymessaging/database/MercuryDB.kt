@@ -53,4 +53,8 @@ abstract class MercuryDB : RoomDatabase() {
     fun getUsers(): List<User> {
         return userDao().getAllUsers()
     }
+
+    fun getUserByID(id: Long): User {
+        return userDao().getUser(id)
+    }
 }

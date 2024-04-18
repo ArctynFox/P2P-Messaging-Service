@@ -8,7 +8,6 @@ import java.io.File
 
 @Entity(tableName = "messages", foreignKeys = [ForeignKey(entity = User::class, parentColumns = arrayOf("id"), childColumns = arrayOf("user"), onDelete = ForeignKey.CASCADE)])
 class Message (
-    //TODO: make the user reference a foreign key
     var user: User,
     var isAuthor: Boolean,
     var text: String,

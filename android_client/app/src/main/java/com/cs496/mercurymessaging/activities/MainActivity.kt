@@ -45,16 +45,20 @@ class MainActivity : AppCompatActivity() {
             return userList.size
         }
 
-        //maps UI views to variables
+        //binds UI views to variables
         inner class ItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val username: TextView = itemView.findViewById(R.id.user_name)
         }
 
-        //using the mappings above, fill the given view holder with the respective data
+        //using the bindings above, fill the given view holder with the respective data
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
             val item = userList[position]
             holder.itemView.tag = item.id
             holder.username.text = item.nickname
         }
+    }
+
+    fun onAddUserClick(v: View) {
+        //go to add user screen
     }
 }
