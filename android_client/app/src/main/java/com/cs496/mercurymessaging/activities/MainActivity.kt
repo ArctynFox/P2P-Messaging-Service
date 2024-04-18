@@ -1,21 +1,22 @@
-package com.cs496.mercurymessaging
+package com.cs496.mercurymessaging.activities
 
-import android.graphics.BitmapFactory
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.cs496.mercurymessaging.R
+import com.cs496.mercurymessaging.database.MercuryDB.Companion.createDB
+import com.cs496.mercurymessaging.database.MercuryDB.Companion.db
+import com.cs496.mercurymessaging.database.User
 import com.cs496.mercurymessaging.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-    lateinit var binding: ActivityMainBinding
-    lateinit var recyclerView: RecyclerView
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var recyclerView: RecyclerView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -24,31 +25,36 @@ class MainActivity : AppCompatActivity() {
         displayUserList()
     }
 
+    //fill the recyclerView with user entries
     private fun displayUserList() {
-        //db = createDB(this)
-        //val users = db.getUsers()
+        db = createDB(this)
+        val users = db.getUsers()
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        //recyclerView.adapter = ItemAdapter(users)
+        recyclerView.adapter = ItemAdapter(users)
     }
 
-    class ItemAdapter(private val metadataList: List<Metadata>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+    //item adapter to fill each user_recycle_item with a user's info
+    class ItemAdapter(private val userList: List<User>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+        //inflates the layout of each recycle item
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.user_recycle_item, parent, false)
             return ItemViewHolder(view)
         }
 
         override fun getItemCount(): Int {
-            return metadataList.size
+            return userList.size
         }
 
-        override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
-            val item = metadataList[position]
-            //holder.itemView.tag = item.id
-            //holder.username.text = item.nickname
-        }
-
+        //maps UI views to variables
         inner class ItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val username: TextView = itemView.findViewById(R.id.user_name)
+        }
+
+        //using the mappings above, fill the given view holder with the respective data
+        override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
+            val item = userList[position]
+            holder.itemView.tag = item.id
+            holder.username.text = item.nickname
         }
     }
 }

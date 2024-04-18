@@ -6,15 +6,15 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import java.io.File
 
-@Entity(tableName = "messages")
+@Entity(tableName = "messages", foreignKeys = [ForeignKey(entity = User::class, parentColumns = arrayOf("id"), childColumns = arrayOf("user"), onDelete = ForeignKey.CASCADE)])
 class Message (
     //TODO: make the user reference a foreign key
     var user: User,
     var isAuthor: Boolean,
     var text: String,
-    var timeStamp: Long,
+    var timestamp: Long,
     var file: File? = null
         ) {
     @PrimaryKey(autoGenerate = true)
-    var id: Int = 0
+    var id: Long = 0
 }

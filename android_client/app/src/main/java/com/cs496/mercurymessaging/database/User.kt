@@ -11,5 +11,5 @@ class User (
     var isConnected: Boolean = false
         ) {
     @PrimaryKey(autoGenerate = true)
-    var id: Int = 0
+    var id: Long = 0
 }
