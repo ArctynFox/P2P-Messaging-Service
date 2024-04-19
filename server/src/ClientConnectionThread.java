@@ -74,8 +74,11 @@ public class ClientConnectionThread extends Thread {
             char[] passKey = {'a','$','F','f','G','@','2','8','m','s','4','e'};
             if(!receive().equals(new String(passKey))) {
                 print("Client passkey does not match server's.");
+                send("passkeyFail");
                 interrupt();
                 return;
+            } else {
+                send("passkeySucceed");
             }
 
             //receive the connected client's user hash
@@ -123,7 +126,6 @@ public class ClientConnectionThread extends Thread {
                 //such as getting a user hash, updating their own user IP entry, or obtaining the IP of a given user hash
                 String requestedAction = receive();
                 switch(requestedAction) {
-                    //TODO: add necessary actions
                     //case for facilitating a p2p connection between two clients
                     case "facilitateConnection":
                         //receive the target user's hash from the connected client
@@ -286,4 +288,3 @@ public class ClientConnectionThread extends Thread {
         System.out.println("Thread " + threadID + ": " + message);
     }
 }
-
