@@ -1,40 +1,42 @@
+package com.cs496.mercurymessaging.networking.threads;
+
+import android.util.Log;
+
+import com.cs496.mercurymessaging.database.MercuryDB;
+import com.cs496.mercurymessaging.database.Message;
+import com.cs496.mercurymessaging.database.User;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.security.Key;
 import java.security.KeyFactory;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.Base64;
+import java.util.Objects;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.spec.GCMParameterSpec;
 
-//thread that handles all actions a connecting client should need
-public class ClientConnectionThread extends Thread {
+public class HostClientThread extends Thread {
     Socket socket;
-    Connection db;
-    int threadID;
     DataOutputStream out;
     BufferedReader in;
     Key aesKey;
-    String userHash;
-    
+    User user;
+    MercuryDB db;
+    String tag = this.getClass().getName();
 
-    ClientConnectionThread(Socket socket, Connection db, int id) {
+    HostClientThread(Socket socket, MercuryDB db) {
         this.socket = socket;
         this.db = db;
-        this.threadID = id;
     }
 
     @Override
@@ -68,111 +70,51 @@ public class ClientConnectionThread extends Thread {
             String aesKeyString = new String(Base64.getEncoder().encode(encryptedAESKey));
             out.writeBytes(aesKeyString + "\n");
 
-            //receive passkey from client to determine if it is a client of the Mercury messaging group
-            //stored as char array to prevent security issues when reading binary
-            //(shouldn't really matter on serverside but we do it anyway)
-            char[] passKey = {'a','$','F','f','G','@','2','8','m','s','4','e'};
-            if(!receive().equals(new String(passKey))) {
-                print("Client passkey does not match server's.");
-                send("passkeyFail");
-                interrupt();
-                return;
-            } else {
-                send("passkeySucceed");
-            }
-
             //receive the connected client's user hash
-            userHash = receive();
+            String userHash = receive();
 
-            //if the user indicates that it has no hash, generate one for it and add a new user entry
-            if(userHash.equals("N/A")) {
-                String hash;
-
-                //generate random hashes until the hash generated is unique
-                while(true) {
-                    //generate a user hash
-                    hash = generateUserHash();
-                    //query the DB to see if a user with that hash exists
-                    PreparedStatement query = db.prepareStatement("SELECT COUNT(*) AS rowCount FROM users WHERE hash = ?");
-                    query.setString(1, hash);
-                    ResultSet results = query.executeQuery();
-                    results.next();
-                    //by getting the count of the results
-                    int size = results.getInt("rowCount");
-                    results.close();
-
-                    //if there is not a user with that hash, 
-                    if(size == 0) {
-                        break;
-                    }
-                }
-
-                //insert the new user and corresponding hash into the database
-                PreparedStatement insert = db.prepareStatement("INSERT INTO users(hash, ip) VALUES(?, ?)");
-                insert.setString(1, hash);
-                insert.setString(2, socket.getInetAddress().getHostAddress());
-                insert.execute();
+            //get or create the user's db entry
+            if(!db.doesUserExist(userHash)) {
+                user = new User(userHash, Objects.requireNonNull(socket.getInetAddress().getHostAddress()), "", true);
+                db.addUser(user);
             } else {
-                //update the user's entry's IP address
-                PreparedStatement update = db.prepareStatement("UPDATE users SET ip = ? WHERE hash = ?");
-                update.setString(1, socket.getInetAddress().getHostAddress());
-                update.setString(2, userHash);
-                update.executeUpdate();
+                user = db.getUserByHash(userHash);
             }
 
-            //keep listening to client until disconnected
+            //keep listening to client peer until disconnected
             while(true) {
-                //switch statement that handles different actions that the client could request
-                //such as getting a user hash, updating their own user IP entry, or obtaining the IP of a given user hash
-                String requestedAction = receive();
-                switch(requestedAction) {
-                    //case for facilitating a p2p connection between two clients
-                    case "facilitateConnection":
-                        //receive the target user's hash from the connected client
-                        String targetHash = receive();
+                String incoming = receive();
 
-                        //excute a prepared query to find the user with that hash
-                        PreparedStatement query = db.prepareStatement("SELECT * FROM users WHERE hash = ?");
-                        query.setString(1, targetHash);
-                        ResultSet results = query.executeQuery();
-                        results.first();
-
-                        //send the IP string back to the connected client
-                        String targetIP = results.getString("IP");
-                        send(targetIP + "\0" + targetHash);
-                        //TODO: at this point, the connected client should attempt to start sending UDP packets to the target IP until it receives a response (UDP hole punch)
-                        //but for now, we're just seeing if the current concept will work, so we're handling it via TCP with open ports
-
-                        //TODO: notify the target client that it needs to try to connect in hole-punched implementation
-                        break;
-                    //case for when anything else is received
-                    default:
-                        print("Did not receive an expected message, disconnecting from client.");
-                        interrupt();
-                        break;
+                if(incoming.equals("disconnect")) {
+                    interrupt();
                 }
-            
+
+                print("Received a message from " + user.getHash() + ".");
+
+                String[] messageInfo = incoming.split("\0");
+
+                print("Incoming message: " + messageInfo[0]);
+
+                Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]), null);
+
+                db.addMessage(message);
             }
         } catch (IOException e) {
             print("Could not get/send message with client.");
             e.printStackTrace();
             interrupt();
-            return;
         } catch (NoSuchAlgorithmException e) {
             print("Algorithm not found.");
             e.printStackTrace();
             interrupt();
-            return;
         } catch (InvalidKeySpecException e) {
             print("Given key does not match X509 spec.");
             e.printStackTrace();
             interrupt();
-            return;
         } catch (Exception e) {
             print("Problem when encrypting/decrypting a message.");
             e.printStackTrace();
             interrupt();
-            return;
         }
     }
 
@@ -201,13 +143,13 @@ public class ClientConnectionThread extends Thread {
     //receive the incoming line, AES decrypt, and return it as a byte array
     public byte[] receiveBytes() throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        
+
         // Read nonce and encrypted message
         String encryptedEncodedMessage = in.readLine();
         String[] parts = encryptedEncodedMessage.split(":");
         byte[] nonce = Base64.getDecoder().decode(parts[0]);
         byte[] decodedBytes = Base64.getDecoder().decode(parts[1]);
-        
+
         cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 
         // Decrypt message
@@ -217,13 +159,13 @@ public class ClientConnectionThread extends Thread {
     //receive the incoming line, AES decrypt, and return as String
     public String receive() throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        
+
         // Read nonce and encrypted message
         String encryptedEncodedMessage = in.readLine();
         String[] parts = encryptedEncodedMessage.split(":");
         byte[] nonce = Base64.getDecoder().decode(parts[0]);
         byte[] decodedBytes = Base64.getDecoder().decode(parts[1]);
-        
+
         cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 
         // Decrypt message
@@ -247,7 +189,7 @@ public class ClientConnectionThread extends Thread {
         Base64.Encoder encoder = Base64.getEncoder();
 
         // Concatenate nonce and encrypted message
-        String encryptedEncodedMessage = new String(encoder.encodeToString(nonce)) + ":" + new String(encoder.encodeToString(encryptedMessage));
+        String encryptedEncodedMessage = encoder.encodeToString(nonce) + ":" + encoder.encodeToString(encryptedMessage);
 
         out.writeBytes(encryptedEncodedMessage + '\n');
         out.flush();
@@ -261,32 +203,8 @@ public class ClientConnectionThread extends Thread {
         return nonce;
     }
 
-    //create an identifier hash when a new user joins the network
-    String generateUserHash() throws NoSuchAlgorithmException {
-        //securely generate a string of 32 random characters
-        String SALTCHARS = "abcdefghijklmnopqrstuvwxyz1234567890";
-		StringBuilder salt = new StringBuilder();
-		SecureRandom rnd = new SecureRandom();
-		while (salt.length() < 32) {
-			int index = (int) (rnd.nextFloat() * SALTCHARS.length());
-			salt.append(SALTCHARS.charAt(index));
-		}
-		String saltStr = salt.toString();
-
-        //hash the string with MD5
-        MessageDigest digest = MessageDigest.getInstance("MD5");
-        byte[] digestBytes = digest.digest(saltStr.getBytes());
-        BigInteger signum = new BigInteger(1, digestBytes);
-        String hash = signum.toString(16);
-        while(hash.length() < 32) {
-            hash = "0" + hash;
-        }
-
-        return hash;
-    }
-
     //adapter to shorthand a print statement and include the thread's ID
     void print(String message) {
-        System.out.println("Thread " + threadID + ": " + message);
+        Log.d(tag,user.getHash() + ": " + message);
     }
 }

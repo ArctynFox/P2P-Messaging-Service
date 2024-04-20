@@ -12,8 +12,17 @@ interface UserDAO {
     @Query("SELECT * FROM users")
     fun getAllUsers(): List<User>
 
+    //get a user by id
     @Query("SELECT * FROM users WHERE id = :id")
     fun getUser(id: Long): User
+
+    //get a user by hash
+    @Query("SELECT * FROM users WHERE hash = :hash")
+    fun getUserByHash(hash: String): User
+
+    //check if a user exists (0 if no, anything else if yes)
+    @Query("SELECT COUNT(*) FROM users WHERE hash = :hash")
+    fun userExists(hash: String): Long
 
     //add a user
     @Insert(onConflict = OnConflictStrategy.REPLACE)

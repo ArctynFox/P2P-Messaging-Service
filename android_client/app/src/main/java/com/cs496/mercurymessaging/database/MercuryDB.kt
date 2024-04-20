@@ -8,14 +8,15 @@ import androidx.room.RoomDatabase
 @Database(entities = [User::class, Message::class], version = 1)
 abstract class MercuryDB : RoomDatabase() {
     companion object {
-        lateinit var db: MercuryDB
+        @JvmField
+        var db: MercuryDB? = null
 
         //gets reference to database and initializes it if it isn't already
         fun createDB(context: Context): MercuryDB {
             db = Room.databaseBuilder(context, MercuryDB::class.java, "mercury").allowMainThreadQueries().build()
-            db.initialize()
+            db!!.initialize()
 
-            return db
+            return db as MercuryDB
         }
     }
 
@@ -56,5 +57,13 @@ abstract class MercuryDB : RoomDatabase() {
 
     fun getUserByID(id: Long): User {
         return userDao().getUser(id)
+    }
+
+    fun getUserByHash(hash: String): User {
+        return userDao().getUserByHash(hash)
+    }
+
+    fun doesUserExist(hash: String): Boolean {
+        return userDao().userExists(hash) != 0L;
     }
 }

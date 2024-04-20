@@ -12,13 +12,15 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.cs496.mercurymessaging.App;
 import com.cs496.mercurymessaging.activities.MainActivity;
-import com.cs496.mercurymessaging.networking.threads.ServerThread;
+import com.cs496.mercurymessaging.networking.threads.ServerConnection;
 
 public class MercuryService extends Service {
     public static MercuryService singleton = null;
     public static boolean isRunning = false;
     String tag = this.getClass().getName();
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(tag, "Starting sockets for mercury connections...");
@@ -46,10 +48,13 @@ public class MercuryService extends Service {
 
         singleton = this;
 
+        App.serverConnection = new ServerConnection(this, getSharedPreferences("mercury", Context.MODE_PRIVATE));
+        App.serverConnection.initialize();
+
+        //create HostThread and run
+
         return super.onStartCommand(intent, flags, startId);
     }
-
-    Thread serverThread = new ServerThread(this, getSharedPreferences("mercury", Context.MODE_PRIVATE));
 
     @Override
     public void onDestroy() {

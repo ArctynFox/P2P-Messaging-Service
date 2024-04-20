@@ -1,8 +1,15 @@
 package com.cs496.mercurymessaging.networking.threads;
 
+import static com.cs496.mercurymessaging.database.MercuryDB.db;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
+
+import com.cs496.mercurymessaging.App;
+import com.cs496.mercurymessaging.database.MercuryDB;
+import com.cs496.mercurymessaging.database.Message;
+import com.cs496.mercurymessaging.database.User;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -23,40 +30,44 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-//thread which handles connection and data passing with central server
-public class ServerThread extends Thread {
+public class ClientConnection {
     Socket socket;
     BufferedReader fromServer;
     DataOutputStream toServer;
     SecretKey aesKey;
     Context context;
-
     SharedPreferences prefs;
+    User user;
+    String tag = this.getClass().getName();
 
-    public ServerThread(Context context, SharedPreferences prefs) {
+    public ClientConnection(String address, Context context, SharedPreferences prefs, String hash) throws IOException {
+        initialize(address);
         this.context = context;
         this.prefs = prefs;
+
+        if(db == null) {
+            MercuryDB.Companion.createDB(context);
+        }
+
+        this.user = db.getUserByHash(hash);
     }
 
-    //TODO: any use of the Log class is android-only and should be replaced with print statements on the PC client
-
-    @Override
-    public void run() {
+    public void initialize(String ip) {
         try {
-            connectToServer();
+            connectToServer(ip);
         } catch (IOException e) {
-            Log.e("ServerThread", "Failure to connect to server.");
+            Log.e(tag, "Failure to connect to server.");
             e.printStackTrace();
-            interrupt();
+            disconnect();
             return;
         }
 
         try {
             openDataPathways();
         } catch (IOException e) {
-            Log.e("ServerThread", "Failed to open data streams with server.");
+            Log.e(tag, "Failed to open data streams with server.");
             e.printStackTrace();
-            interrupt();
+            disconnect();
             return;
         }
 
@@ -68,44 +79,67 @@ public class ServerThread extends Thread {
             publicKey = keyPair.getPublic();
             privateKey = keyPair.getPrivate();
         } catch (NoSuchAlgorithmException e) {
-            Log.e("ServerThread", "Unrecognized RSA algorithm.");
+            Log.e(tag, "Unrecognized RSA algorithm.");
             e.printStackTrace();
-            interrupt();
+            disconnect();
             return;
         }
 
         try {
             getAESKey(publicKey, privateKey);
         } catch (IOException e) {
-            Log.e("ServerThread", "Failed to send or receive data with server when exchanging RSA key for AES key.");
+            Log.e(tag, "Failed to send or receive data with server when exchanging RSA key for AES key.");
             e.printStackTrace();
-            interrupt();
+            disconnect();
             return;
         }
 
-        try {
-            assertPassKey(new String(new char[]{'a', '$', 'F', 'f', 'G', '@', '2', '8', 'm', 's', '4', 'e'}));
-        } catch (Exception e) {
-            Log.e("ServerThread", "Failed to receive message from server.");
-            e.printStackTrace();
-            interrupt();
-            return;
+        if(db == null) {
+            MercuryDB.Companion.createDB(context);
         }
 
         try {
-            exchangeHash();
+            send(prefs.getString("hash", "N/A"));
         } catch (Exception e) {
-            Log.e("ServerThread", "Failed to exchange user hash with server.");
-            e.printStackTrace();
-            interrupt();
+            Log.e(tag, "Failed to send hash to host peer.");
         }
+
+        receiveMessageThread.start();
     }
 
+    //thread that just listens for incoming messages and puts them in the database, and tells the UI to update if on the respective message screen
+    Thread receiveMessageThread = new Thread() {
+        @Override
+        public void run() {
+            while(true) {
+                try {
+                    String incoming = receive();
+
+                    if(incoming.equals("disconnect")) {
+                        disconnect();
+                    }
+
+                    Log.d(tag, "Received a message from " + user.getHash() + ".");
+
+                    String[] messageInfo = incoming.split("\0");
+
+                    Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]), null);
+
+                    assert db != null;
+                    db.addMessage(message);
+                } catch (Exception e) {
+                    Log.e("ReceiveMessageThread","Failed to receive message from host.");
+                    interrupt();
+                    return;
+                }
+            }
+        }
+    };
+
     //open socket and try to connect to central server
-    private void connectToServer() throws IOException {
+    private void connectToServer(String ip) throws IOException {
         socket = new Socket();
-        socket.setSoTimeout(5000);
-        socket.connect(new InetSocketAddress("192.168.1.47", 52761), 10000);
+        socket.connect(new InetSocketAddress(ip, 52762), 10000);
     }
 
     //open the data streams to and from the server
@@ -157,29 +191,6 @@ public class ServerThread extends Thread {
         aesKey = new SecretKeySpec(decryptedMessage, "AES");
     }
 
-    //assert the passkey with the server
-    private void assertPassKey(String passKey) throws Exception {
-        send(passKey);
-        String response = receive();
-        if(response.equals("passkeyFail")) {
-            interrupt();
-        }
-    }
-
-    //notify the server of the user's hash or that it needs a hash, and receive one if latter
-    private void exchangeHash() throws Exception {
-        //get hash from prefs
-        String hash = prefs.getString("hash", "N/A");
-
-        //send it
-        send(hash);
-
-        //if the hash was the default not available value, receive a hash and save it to prefs
-        if(hash.equals("N/A")) {
-            prefs.edit().putString("hash", receive()).apply();
-        }
-    }
-
     //send AES encrypted message to server
     public void send(String message) throws Exception {
         Cipher AEScipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -228,17 +239,16 @@ public class ServerThread extends Thread {
         return nonce;
     }
 
-    //safe close data pathways on interrupt
-    @Override
-    public void interrupt() {
+    //safe close data pathways and remove itself from the client hashmap
+    public void disconnect() {
         try {
+            App.clientConnectionHashMap.remove(user.getHash());
             toServer.close();
             fromServer.close();
             socket.close();
         } catch (IOException e) {
-            Log.e("ServerThread", "Issue when trying to close socket and data streams.");
+            Log.e("ClientConnection", "Issue when trying to close socket and data streams.");
             e.printStackTrace();
         }
-        super.interrupt();
     }
 }
