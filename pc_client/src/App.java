@@ -24,9 +24,9 @@ public class App {
         // Disable editing in chat area
         chatArea.setEditable(false);
 
-        // Set background color for chat area
-        Color chatAreaColor = new Color(230, 242, 255); //pastel blue
-        chatArea.setBackground(chatAreaColor);
+        // Set pastel blue background color for chat area
+        Color pastelBlue = new Color(230, 242, 255); // RGB values for pastel blue
+        chatArea.setBackground(pastelBlue);
 
         // Set white background color for message field
         messageField.setBackground(Color.WHITE);
@@ -67,9 +67,15 @@ public class App {
     // Method to send message
     private static void sendMessage() {
         String message = messageField.getText();
+        
+        // Add the message to the chat area immediately
+        chatArea.append("You: " + message + "\n");
+        
+        // Clear the message field after sending
+        messageField.setText("");
+        
         // Send message to server
         writer.println(message);
-        messageField.setText(""); // Clear the message field after sending
     }
 }
 

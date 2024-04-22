@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Mercury Messaging</string>
+    <string name="username_placeholder">Username</string>
+</resources>
