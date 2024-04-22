@@ -8,4 +8,7 @@ This should be modifiable such that anyone can create their own central server a
 
 1. Install VSCode and add the Debugger for Java and Extension Pack for Java extensions.
 2. Install Temurin Java 17 LTS.
-3. Run App.java.
+3. Install MySQL server and create a database with the table described in [the base readme](../README.md).
+4. Run the MySQL server.
+5. Run App.java.
+6. Enter the SQL server credentials.

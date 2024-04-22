@@ -1,15 +1,15 @@
 # Functional Requirements/Attributes
 ## Clients
-- [ ] Clients should only need to communicate with a central server to find peers and facilitate [hole-punching](https://github.com/KunjanThadani/holepunchsample/) (or assume that all clients have a listening port forwarded[^1]).
-- [ ] Messages between clients should *never* go through any sort of central or relay server.
-- [ ] All messages should be encrypted to facilitate secure transfer of data.
-- [ ] Clients should be able to pair with each other to start messaging via a user ID
-- [ ] For simplicity, users should be per-device, i.e. each client installation has a different user ID and messages do not sync between one person's devices if they use multiple.
-- [ ] Clients should attempt to contact the central server frequently to ensure the client's IP in the server's database is up-to-date.
-- [ ] Clients should have a local database with multiple tables for user and message caching.
-	- [ ] One table for known user hashes, as well as a nickname for each user.
-	- [ ] One for messages which foreign key reference the known users table's ID column.
-- [ ] The first time the client process is opened, it should connect to the server to receive a unique user hash.
+- [x] Clients should only need to communicate with a central server to find peers and facilitate [hole-punching](https://github.com/KunjanThadani/holepunchsample/) (or assume that all clients have a listening port forwarded[^1]). For the sake of the project deadline, we are assuming clients are port-forwarded or reachable.
+- [x] Messages between clients should *never* go through any sort of central or relay server.
+- [x] All messages should be encrypted to facilitate secure transfer of data.
+- [x] Clients should be able to pair with each other to start messaging via a user ID
+- [x] For simplicity, users should be per-device, i.e. each client installation has a different user ID and messages do not sync between one person's devices if they use multiple.
+- [x] ~~Clients should attempt to contact the central server frequently to ensure the client's IP in the server's database is up-to-date.~~ Clients keep a constant socket with the server, so the IP is updated any time the client is opened.
+- [x] Clients should have a local database with multiple tables for user and message caching.
+	- [x] One table for known user hashes, as well as a nickname for each user.
+	- [x] One for messages which foreign key reference the known users table's ID column.
+- [x] The first time the client process is opened, it should connect to the server to receive a unique user hash.
 ### Optional
 - [ ] Clients should be able to pair using a QR code or nearby device scanning.
 - [ ] Clients should be able to send small files or images to each other.
@@ -17,10 +17,10 @@
 	- [ ] By definition requires adding a posted date column to the message tables.
 
 ## Server
-- [ ] The server should have a database with at least a table that holds a user ID and the corresponding IP.
-- [ ] The server should support multiple user connections at once to be scale-able (for testing purposes, 2-4 is sufficient).
-- [ ] The first time a new client connects, a new user hash should be generated and added to the user table, and then the hash should be sent back to the user.
-- [ ] The server should accept requests from clients to contact other clients and facilitate their attempt at connecting to each other via hole-punching.
+- [x] The server should have a database with at least a table that holds a user ID and the corresponding IP.
+- [x] The server should support multiple user connections at once to be scale-able (for testing purposes, 2-4 is sufficient).
+- [x] The first time a new client connects, a new user hash should be generated and added to the user table, and then the hash should be sent back to the user.
+- [x] The server should accept requests from clients to contact other clients and facilitate their attempt at connecting to each other ~~via hole-punching.~~ Doesn't use hole-punching now, just tells the requesting client the requested's IP so it can open a socket to it.
 
 # Non-Functional Requirements/Attributes
 - [x] Clients' local databases should use something lightweight such as SQLite
