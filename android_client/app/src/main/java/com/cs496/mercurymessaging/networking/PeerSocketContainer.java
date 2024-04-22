@@ -51,19 +51,22 @@ public class PeerSocketContainer {
         long timestamp = System.currentTimeMillis();
         Message message = new Message(user.getHash(), true, text, timestamp);
 
-        try {
-            if(isHostPeer) {
-                hostClientThread.send(text);
-                hostClientThread.send(Long.toString(timestamp));
-            } else {
-                clientConnection.send(text);
-                clientConnection.send(Long.toString(timestamp));
+        Log.d(tag, "Attempting to send message: " + text);
+
+        new Thread(() -> {
+            try {
+                if (isHostPeer) {
+                    hostClientThread.send(text);
+                    hostClientThread.send(Long.toString(timestamp));
+                } else {
+                    clientConnection.send(text);
+                    clientConnection.send(Long.toString(timestamp));
+                }
+            } catch (Exception e) {
+                Log.e(tag, "Exception when trying to send message to " + user.getHash());
+                e.printStackTrace();
             }
-        } catch (Exception e){
-            Log.d(tag, "Exception when trying to send message to " + user.getHash());
-            e.printStackTrace();
-            return;
-        }
+        }).start();
 
         assert db != null;
         db.addMessage(message);

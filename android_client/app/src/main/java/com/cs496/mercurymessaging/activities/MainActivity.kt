@@ -26,6 +26,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var prefs: SharedPreferences
     var tag: String = "MainActivity"
+    var perms = arrayOf(
+        "android.permission.POST_NOTIFICATIONS"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,13 +72,12 @@ class MainActivity : AppCompatActivity() {
     public fun displayUserList() {
         val users = db!!.getUsers()
         val llm = LinearLayoutManager(this)
-        llm.stackFromEnd = true
         recyclerView.layoutManager = llm
-        recyclerView.adapter = ItemAdapter(users, this)
+        recyclerView.adapter = ItemAdapter(users)
     }
 
     //item adapter to fill each user_recycle_item with a user's info
-    class ItemAdapter(private val userList: List<User>, context: Context) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+    class ItemAdapter(private val userList: List<User>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
         //inflates the layout of each recycle item
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.user_recycle_item, parent, false)

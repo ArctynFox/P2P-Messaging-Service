@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
@@ -53,7 +54,10 @@ public class MercuryService extends Service {
 
         singleton = this;
 
-        App.serverConnection = new ServerConnection(getSharedPreferences("mercury", Context.MODE_PRIVATE), this);
+        SharedPreferences prefs = getSharedPreferences("mercury", Context.MODE_PRIVATE);
+        App.hash = prefs.getString("hash", "N/A");
+
+        App.serverConnection = new ServerConnection(prefs, this);
         App.serverConnection.initialize();
 
         //create HostThread and run

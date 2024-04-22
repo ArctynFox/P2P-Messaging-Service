@@ -14,6 +14,9 @@ interface MessageDAO {
     @Query("SELECT * FROM messages WHERE hash = :hash")
     fun getUserMessages(hash: String): List<Message>
 
+    @Query("SELECT * FROM messages")
+    fun getMessages(): List<Message>
+
     //create a message
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun addMessage(message: Message): Long

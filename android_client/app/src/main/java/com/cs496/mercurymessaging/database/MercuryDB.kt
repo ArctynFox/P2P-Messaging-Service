@@ -45,6 +45,10 @@ abstract class MercuryDB : RoomDatabase() {
         return messageDao().getUserMessages(user.hash)
     }
 
+    fun getAllMessages(): List<Message> {
+        return messageDao().getMessages()
+    }
+
     //insert user
     fun addUser(user: User): Long {
         return userDao().addUser(user)

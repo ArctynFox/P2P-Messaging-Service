@@ -2,6 +2,7 @@ package com.cs496.mercurymessaging.networking.threads;
 
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
@@ -43,6 +44,7 @@ public class ClientConnection {
     public ClientConnection(String address, SharedPreferences prefs, String hash) {
         initialize(address);
         this.prefs = prefs;
+
 
         assert db != null;
 
@@ -94,9 +96,12 @@ public class ClientConnection {
         }
 
         try {
-            send(prefs.getString("hash", "N/A"));
+            send(App.hash);
         } catch (Exception e) {
             Log.e(tag, "Failed to send hash to host peer.");
+            e.printStackTrace();
+            disconnect();
+            return false;
         }
 
         receiveMessageThread.start();
@@ -147,6 +152,7 @@ public class ClientConnection {
                     }
                 } catch (Exception e) {
                     Log.e("ReceiveMessageThread","Failed to receive message from host.");
+                    e.printStackTrace();
                     interrupt();
                     return;
                 }
@@ -239,8 +245,8 @@ public class ClientConnection {
         // Read nonce and encrypted message
         String encryptedEncodedMessage = fromServer.readLine();
         String[] parts = encryptedEncodedMessage.split(":");
-        byte[] nonce = Base64.getDecoder().decode(parts[0]);
-        byte[] decodedBytes = Base64.getDecoder().decode(parts[1]);
+        byte[] nonce = Base64.getMimeDecoder().decode(parts[0]);
+        byte[] decodedBytes = Base64.getMimeDecoder().decode(parts[1]);
 
         cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 

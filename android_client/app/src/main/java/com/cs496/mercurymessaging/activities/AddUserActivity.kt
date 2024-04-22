@@ -59,6 +59,7 @@ class AddUserActivity: AppCompatActivity() {
                 App.serverConnection.send(hash)
             }.start()
             //the response is handled in ServerConnection
+            App.mainActivity.displayUserList()
             finish()
         }
     }

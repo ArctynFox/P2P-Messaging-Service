@@ -1,7 +1,6 @@
 package com.cs496.mercurymessaging.activities
 
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Bundle
@@ -17,7 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cs496.mercurymessaging.App
 import com.cs496.mercurymessaging.R
-import com.cs496.mercurymessaging.database.MercuryDB
 import com.cs496.mercurymessaging.database.MercuryDB.Companion.createDB
 import com.cs496.mercurymessaging.database.MercuryDB.Companion.db
 import com.cs496.mercurymessaging.database.tables.Message
@@ -56,10 +54,14 @@ class MessagesActivity : AppCompatActivity() {
             finish()
         }
 
-        Thread {
-            App.serverConnection.send("facilitateConnection")
-            App.serverConnection.send(hash)
-        }.start()
+        binding.userID.text = user.nickname
+
+        if(App.peerSocketContainerHashMap[hash] == null) {
+            Thread {
+                App.serverConnection.send("facilitateConnection")
+                App.serverConnection.send(hash)
+            }.start()
+        }
 
         messagesRecyclerView = binding.messagesRecyclerView
         displayMessages()
@@ -93,13 +95,21 @@ class MessagesActivity : AppCompatActivity() {
 
         db?.addMessage(message)
 
-        App.peerSocketContainerHashMap[user.hash]?.send(text)
-        App.peerSocketContainerHashMap[user.hash]?.send(timestamp.toString())
+        Thread {
+            App.peerSocketContainerHashMap[user.hash]?.send(text)
+        }.start()
+
+        binding.messageEdit.setText("")
+
+        displayMessages()
     }
 
     //fill the recyclerView with user entries
     fun displayMessages() {
         val messages = db!!.getMessages(user)
+        for(message in messages) {
+            Log.d(tag, "Message: ${message.text}; User: ${message.hash}; Timestamp: ${message.timestamp}")
+        }
         val llm = LinearLayoutManager(this)
         llm.stackFromEnd = true
         messagesRecyclerView.layoutManager = llm
@@ -107,15 +117,15 @@ class MessagesActivity : AppCompatActivity() {
     }
 
     //item adapter to fill each user_recycle_item with a user's info
-    class ItemAdapter(private val userList: List<Message>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+    class ItemAdapter(private val messageList: List<Message>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
         //inflates the layout of each recycle item
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.user_recycle_item, parent, false)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.message_recycle_item, parent, false)
             return ItemViewHolder(view)
         }
 
         override fun getItemCount(): Int {
-            return userList.size
+            return messageList.size
         }
 
         //binds UI views to variables
@@ -127,12 +137,11 @@ class MessagesActivity : AppCompatActivity() {
 
         //using the bindings above, fill the given view holder with the respective data
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
-            val item = userList[position]
+            val item = messageList[position]
             holder.itemView.tag = item.id
             holder.message.text = item.text
             val sdf = SimpleDateFormat("hh:mm:ss a - MMM dd, yyyy", Locale.getDefault())
-            val tzOffset = TimeZone.getDefault().getOffset(Date().time)
-            holder.timestamp.text = sdf.format(item.timestamp + tzOffset)
+            holder.timestamp.text = sdf.format(item.timestamp)
 
             if(item.isAuthor) {
                 holder.background.setBackgroundColor(Color.parseColor("#e6f2ff"))

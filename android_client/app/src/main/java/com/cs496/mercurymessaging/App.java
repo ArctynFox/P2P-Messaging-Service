@@ -17,6 +17,8 @@ public class App {
     public static MainActivity mainActivity = null;
     public static MessagesActivity messagesActivity = null;
 
+    public static String hash = null;
+
 
     //check for if the current activity is MainActivity (user list)
     public static boolean isMainActivity() {

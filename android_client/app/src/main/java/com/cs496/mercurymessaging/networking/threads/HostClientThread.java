@@ -119,6 +119,8 @@ public class HostClientThread extends Thread {
 
                 String timestamp = receive();
 
+                Log.d(tag, "Received a message from " + user.getHash() + ".");
+                Log.d(tag, "Incoming message: " + incoming);
 
                 Message message = new Message(user.getHash(), false, incoming, Long.parseLong(timestamp));
 
@@ -132,19 +134,19 @@ public class HostClientThread extends Thread {
                 }
             }
         } catch (IOException e) {
-            print("Could not get/send message with client.");
+            Log.e(tag, "Could not get/send message with client.");
             e.printStackTrace();
             interrupt();
         } catch (NoSuchAlgorithmException e) {
-            print("Algorithm not found.");
+            Log.e(tag, "Algorithm not found.");
             e.printStackTrace();
             interrupt();
         } catch (InvalidKeySpecException e) {
-            print("Given key does not match X509 spec.");
+            Log.e(tag, "Given key does not match X509 spec.");
             e.printStackTrace();
             interrupt();
         } catch (Exception e) {
-            print("Problem when encrypting/decrypting a message.");
+            Log.e(tag, "Problem when encrypting/decrypting a message.");
             e.printStackTrace();
             interrupt();
         }
@@ -159,10 +161,11 @@ public class HostClientThread extends Thread {
             in.close();
             socket.close();
         } catch (Exception e) {
-            print("Failed to close socket on interrupt, but it doesn't matter.");
+            Log.e(tag, "Failed to close socket on interrupt, but it doesn't matter.");
             e.printStackTrace();
         }
         super.interrupt();
+        App.hostThread.reduceThreads();
     }
 
     //encrypt an AES key using an RSA key
@@ -195,8 +198,8 @@ public class HostClientThread extends Thread {
         // Read nonce and encrypted message
         String encryptedEncodedMessage = in.readLine();
         String[] parts = encryptedEncodedMessage.split(":");
-        byte[] nonce = Base64.getDecoder().decode(parts[0]);
-        byte[] decodedBytes = Base64.getDecoder().decode(parts[1]);
+        byte[] nonce = Base64.getMimeDecoder().decode(parts[0]);
+        byte[] decodedBytes = Base64.getMimeDecoder().decode(parts[1]);
 
         cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 
@@ -237,6 +240,10 @@ public class HostClientThread extends Thread {
 
     //adapter to shorthand a print statement and include the thread's ID
     void print(String message) {
-        Log.d(tag,user.getHash() + ": " + message);
+        if(user != null) {
+            Log.d(tag, user.getHash() + ": " + message);
+        } else {
+            Log.d(tag, message);
+        }
     }
 }

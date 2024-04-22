@@ -172,7 +172,7 @@ public class ServerConnection extends Thread {
     //open socket and try to connect to central server
     private void connectToServer() throws IOException {
         socket = new Socket();
-        socket.connect(new InetSocketAddress("192.168.1.27", 52761), 10000);
+        socket.connect(new InetSocketAddress("192.168.1.43", 52761), 10000);
     }
 
     //open the data streams to and from the server
@@ -247,6 +247,7 @@ public class ServerConnection extends Thread {
             Log.d(tag, "Waiting for hash from server.");
             String newHash = receive();
             prefs.edit().putString("hash", newHash).apply();
+            App.hash = newHash;
             Log.d(tag, "Received hash: " + newHash);
         }
     }
