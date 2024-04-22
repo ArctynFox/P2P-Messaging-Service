@@ -13,19 +13,44 @@ public class App {
 
     public static void main(String[] args) throws Exception {
         // Initialize UI components
-        frame = new JFrame("Chat App");
+        frame = new JFrame("Mercury Messaging");
         chatArea = new JTextArea();
         messageField = new JTextField();
         sendButton = new JButton("Send");
 
+        // Set font for chat area
+        chatArea.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        // Disable editing in chat area
+        chatArea.setEditable(false);
+
+        // Set background color for chat area
+        Color chatAreaColor = new Color(230, 242, 255); //pastel blue
+        chatArea.setBackground(chatAreaColor);
+
+        // Set white background color for message field
+        messageField.setBackground(Color.WHITE);
+
+        // Set size of message input field
+        messageField.setPreferredSize(new Dimension(300, 50)); // Adjust dimensions as needed
+
+        // Create a scroll pane for the chat area
+        JScrollPane scrollPane = new JScrollPane(chatArea);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        // Create panel for message input and send button
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new BorderLayout());
+        inputPanel.add(messageField, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
+
         // Set layout
         frame.setLayout(new BorderLayout());
-        frame.add(chatArea, BorderLayout.CENTER);
-        frame.add(messageField, BorderLayout.SOUTH);
-        frame.add(sendButton, BorderLayout.EAST);
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(inputPanel, BorderLayout.SOUTH);
 
         // Set frame properties
-        frame.setSize(400, 300);
+        frame.setSize(400, 400); // Increased height to accommodate larger message input box
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
@@ -47,4 +72,5 @@ public class App {
         messageField.setText(""); // Clear the message field after sending
     }
 }
+
 
