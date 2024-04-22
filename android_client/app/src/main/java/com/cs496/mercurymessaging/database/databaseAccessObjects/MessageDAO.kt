@@ -11,8 +11,8 @@ import com.cs496.mercurymessaging.database.tables.User
 @Dao
 interface MessageDAO {
     //get a list of all messages with the specified user
-    @Query("SELECT * FROM messages WHERE user = :user")
-    fun getUserMessages(user: User): List<Message>
+    @Query("SELECT * FROM messages WHERE hash = :hash")
+    fun getUserMessages(hash: String): List<Message>
 
     //create a message
     @Insert(onConflict = OnConflictStrategy.REPLACE)

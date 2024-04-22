@@ -2,10 +2,12 @@ package com.cs496.mercurymessaging.networking.threads;
 
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.cs496.mercurymessaging.App;
+import com.cs496.mercurymessaging.activities.MainActivity;
 import com.cs496.mercurymessaging.database.tables.Message;
 import com.cs496.mercurymessaging.database.tables.User;
 import com.cs496.mercurymessaging.networking.PeerSocketContainer;
@@ -36,7 +38,7 @@ public class ClientConnection {
     SecretKey aesKey;
     SharedPreferences prefs;
     User user;
-    String tag = this.getClass().getName();
+    String tag = "ClientConnection";
 
     public ClientConnection(String address, SharedPreferences prefs, String hash) {
         initialize(address);
@@ -114,17 +116,35 @@ public class ClientConnection {
                         if(peerSocketContainer != null) {
                             peerSocketContainer.disconnect();
                         } else disconnect();
+
+                        //if the app is on the target user's message screen
+                        if(App.isMessagesActivity()) {
+                            if(App.messagesActivity.user == user) {
+                                //intents that are passed to startActivity open a different screen
+                                Intent intent = new Intent(App.messagesActivity.getBaseContext(), MainActivity.class);
+                                App.messagesActivity.startActivity(intent);
+                            }
+                        }
+
                         return;
                     }
 
+                    String timestamp = receive();
+
                     Log.d(tag, "Received a message from " + user.getHash() + ".");
+                    Log.d(tag, "Incoming message: " + incoming);
 
-                    String[] messageInfo = incoming.split("\0");
-
-                    Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]));
+                    Message message = new Message(user.getHash(), false, incoming, Long.parseLong(timestamp));
 
                     assert db != null;
                     db.addMessage(message);
+                    Log.d(tag, "Message added to database.");
+
+                    if(App.isMessagesActivity()) {
+                        if(App.messagesActivity.user.getHash().equals(message.getHash())) {
+                            App.messagesActivity.runOnUiThread(() -> App.messagesActivity.displayMessages());
+                        }
+                    }
                 } catch (Exception e) {
                     Log.e("ReceiveMessageThread","Failed to receive message from host.");
                     interrupt();

@@ -2,9 +2,11 @@ package com.cs496.mercurymessaging.networking.threads;
 
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
+import android.content.Intent;
 import android.util.Log;
 
 import com.cs496.mercurymessaging.App;
+import com.cs496.mercurymessaging.activities.MainActivity;
 import com.cs496.mercurymessaging.database.tables.Message;
 import com.cs496.mercurymessaging.database.tables.User;
 import com.cs496.mercurymessaging.networking.PeerSocketContainer;
@@ -35,7 +37,7 @@ public class HostClientThread extends Thread {
     BufferedReader in;
     SecretKey aesKey;
     User user;
-    String tag = this.getClass().getName();
+    String tag = "HostClientThread";
 
     HostClientThread(Socket socket) {
         this.socket = socket;
@@ -45,6 +47,7 @@ public class HostClientThread extends Thread {
     public void run() {
         try {
             //open the input and output streams with the client peer
+            print("Attempting to open data streams with client.");
             try {
                 out = new DataOutputStream(socket.getOutputStream());
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -57,12 +60,15 @@ public class HostClientThread extends Thread {
 
             //set up secure encryption for data passing
             //receive RSA public key for one-way message passing
+            print("Expecting RSA public key.");
             String publicKeyString = in.readLine();
+            print("Received " + publicKeyString);
             byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             PublicKey publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
 
             //generate AES key to send back
+            print("Responding with AES key.");
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(128);
             aesKey = keyGenerator.generateKey();
@@ -74,10 +80,12 @@ public class HostClientThread extends Thread {
 
             //receive the connected client peer's user hash
             String userHash = receive();
+            print("Received hash " + userHash);
 
             //get or create the user's db entry
             assert db != null;
             if(!db.doesUserExist(userHash)) {
+                print("Client peer has never connected before. Adding user entry to db.");
                 user = new User(userHash, Objects.requireNonNull(socket.getInetAddress().getHostAddress()), true, Long.MAX_VALUE);
                 db.addUser(user);
             } else {
@@ -89,24 +97,39 @@ public class HostClientThread extends Thread {
             //keep listening to client peer until disconnected
             while(true) {
                 String incoming = receive();
-
+                print("Received message: " + incoming);
                 if(incoming.equals("disconnect")) {
+                    print("Disconnect request received.");
                     PeerSocketContainer peerSocketContainer = App.peerSocketContainerHashMap.get(user.getHash());
                     if(peerSocketContainer != null) {
                         peerSocketContainer.disconnect();
                     } else interrupt();
+
+                    //if the app is on the target user's message screen
+                    if(App.isMessagesActivity()) {
+                        if(App.messagesActivity.user == user) {
+                            //intents that are passed to startActivity open a different screen
+                            Intent intent = new Intent(App.messagesActivity.getBaseContext(), MainActivity.class);
+                            App.messagesActivity.startActivity(intent);
+                        }
+                    }
+
                     return;
                 }
 
-                print("Received a message from " + user.getHash() + ".");
+                String timestamp = receive();
 
-                String[] messageInfo = incoming.split("\0");
 
-                print("Incoming message: " + messageInfo[0]);
-
-                Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]));
+                Message message = new Message(user.getHash(), false, incoming, Long.parseLong(timestamp));
 
                 db.addMessage(message);
+                print("Message added to database.");
+
+                if(App.isMessagesActivity()) {
+                    if(App.messagesActivity.user.getHash().equals(message.getHash())) {
+                        App.messagesActivity.runOnUiThread(() -> App.messagesActivity.displayMessages());
+                    }
+                }
             }
         } catch (IOException e) {
             print("Could not get/send message with client.");

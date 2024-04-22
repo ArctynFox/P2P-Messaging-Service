@@ -40,6 +40,7 @@ public class ClientConnectionThread extends Thread {
     @Override
     public void run() {
         try {
+            print("Attempting to open data streams with client.");
             //open the input and output streams with the client
             try {
                 out = new DataOutputStream(socket.getOutputStream());
@@ -51,13 +52,16 @@ public class ClientConnectionThread extends Thread {
                 return;
             }
 
+            print("Expecting RSA public key.");
             //set up secure encryption for data passing
             //receive RSA public key for one-way message passing
             String publicKeyString = in.readLine();
+            print("Received " + publicKeyString);
             byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             PublicKey publicKey = (PublicKey) keyFactory.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
 
+            print("Responding with AES key.");
             //generate AES key to send back
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(128);
@@ -68,6 +72,7 @@ public class ClientConnectionThread extends Thread {
             String aesKeyString = new String(Base64.getEncoder().encode(encryptedAESKey));
             out.writeBytes(aesKeyString + "\n");
 
+            print("Expecting passkey from client.");
             //receive passkey from client to determine if it is a client of the Mercury messaging group
             //stored as char array to prevent security issues when reading binary
             //(shouldn't really matter on serverside but we do it anyway)
@@ -78,16 +83,17 @@ public class ClientConnectionThread extends Thread {
                 interrupt();
                 return;
             } else {
+                print("Passkey matches.");
                 send("passkeySucceed");
             }
 
             //receive the connected client's user hash
             userHash = receive();
-
+            print("Received hash " + userHash);
             //if the user indicates that it has no hash, generate one for it and add a new user entry
             if(userHash.equals("N/A")) {
                 String hash;
-
+                print("User doesn't have a hash. Generating one...");
                 //generate random hashes until the hash generated is unique
                 while(true) {
                     //generate a user hash
@@ -101,18 +107,22 @@ public class ClientConnectionThread extends Thread {
                     int size = results.getInt("rowCount");
                     results.close();
 
-                    //if there is not a user with that hash, 
+                    //if there is not a user with that hash, break loop and send the hash to the user, as well as add it to the users table
                     if(size == 0) {
                         break;
                     }
                 }
-
                 //insert the new user and corresponding hash into the database
                 PreparedStatement insert = db.prepareStatement("INSERT INTO users(hash, ip) VALUES(?, ?)");
                 insert.setString(1, hash);
                 insert.setString(2, socket.getInetAddress().getHostAddress());
                 insert.execute();
+                //send the hash
+                send(hash);
+                
+                print("Generated and sent hash " + hash);
             } else {
+                print("User entry exists. Updating IP...");
                 //update the user's entry's IP address
                 PreparedStatement update = db.prepareStatement("UPDATE users SET ip = ? WHERE hash = ?");
                 update.setString(1, socket.getInetAddress().getHostAddress());
@@ -122,28 +132,43 @@ public class ClientConnectionThread extends Thread {
 
             //keep listening to client until disconnected
             while(true) {
+                print("Waiting for message from client...");
                 //switch statement that handles different actions that the client could request
                 //such as getting a user hash, updating their own user IP entry, or obtaining the IP of a given user hash
                 String requestedAction = receive();
                 switch(requestedAction) {
                     //case for facilitating a p2p connection between two clients
                     case "facilitateConnection":
+                        print("Client wants to connect to another user.");
                         //receive the target user's hash from the connected client
                         String targetHash = receive();
+                        print(userHash + " requested IP of " + targetHash);
 
-                        //excute a prepared query to find the user with that hash
-                        PreparedStatement query = db.prepareStatement("SELECT * FROM users WHERE hash = ?");
-                        query.setString(1, targetHash);
-                        ResultSet results = query.executeQuery();
-                        results.first();
+                        PreparedStatement queryCount = db.prepareStatement("SELECT COUNT(*) AS hashExists FROM users WHERE hash = ?");
+                        queryCount.setString(1, targetHash);
+                        ResultSet resultCount = queryCount.executeQuery();
+                        resultCount.next();
+                        if(resultCount.getInt("hashExists") == 0) {
+                            print(targetHash + " doesn't exist. Reporting to " + userHash);
+                            send("N/A");
+                            send(targetHash);
+                        } else {
+                            //excute a prepared query to find the user with that hash
+                            PreparedStatement query = db.prepareStatement("SELECT * FROM users WHERE hash = ?");
+                            query.setString(1, targetHash);
+                            ResultSet results = query.executeQuery();
+                            results.next();
 
-                        //send the IP string back to the connected client
-                        String targetIP = results.getString("IP");
-                        send(targetIP + "\0" + targetHash);
-                        //TODO: at this point, the connected client should attempt to start sending UDP packets to the target IP until it receives a response (UDP hole punch)
-                        //but for now, we're just seeing if the current concept will work, so we're handling it via TCP with open ports
+                            //send the IP string back to the connected client
+                            String targetIP = results.getString("ip");
+                            print("Sending ip " + targetIP + " and received hash back to user.");
+                            send(targetIP);
+                            send(targetHash);
+                            //TODO: at this point, the connected client should attempt to start sending UDP packets to the target IP until it receives a response (UDP hole punch)
+                            //but for now, we're just seeing if the current concept will work, so we're handling it via TCP with open ports
 
-                        //TODO: notify the target client that it needs to try to connect in hole-punched implementation
+                            //TODO: notify the target client that it needs to try to connect in hole-punched implementation
+                        }
                         break;
                     //case for when anything else is received
                     default:

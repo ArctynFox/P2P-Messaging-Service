@@ -36,13 +36,13 @@ abstract class MercuryDB : RoomDatabase() {
 
     //insert message
     fun addMessage(message: Message): Long {
-        updateUser(message.user.hash, message.user.nickname, message.user.isConnected, System.currentTimeMillis())
+        //updateUser(message.hash, message.nickname, message.user.isConnected, System.currentTimeMillis())
         return messageDao().addMessage(message)
     }
 
     //get all messages with a specific user
     fun getMessages(user: User): List<Message> {
-        return messageDao().getUserMessages(user)
+        return messageDao().getUserMessages(user.hash)
     }
 
     //insert user
@@ -51,7 +51,7 @@ abstract class MercuryDB : RoomDatabase() {
     }
 
     //update user
-    fun updateUser(hash: String, nickname: String, isConnected: Boolean, timestamp: Long): Long {
+    fun updateUser(hash: String, nickname: String, isConnected: Boolean, timestamp: Long): Int {
         return userDao().updateUser(hash, nickname, isConnected, timestamp)
     }
 

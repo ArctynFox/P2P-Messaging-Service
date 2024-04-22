@@ -1,20 +1,25 @@
 package com.cs496.mercurymessaging.activities
 
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cs496.mercurymessaging.App
 import com.cs496.mercurymessaging.R
 import com.cs496.mercurymessaging.database.MercuryDB
 import com.cs496.mercurymessaging.database.MercuryDB.Companion.createDB
+import com.cs496.mercurymessaging.database.MercuryDB.Companion.db
 import com.cs496.mercurymessaging.database.tables.Message
 import com.cs496.mercurymessaging.database.tables.User
 import com.cs496.mercurymessaging.databinding.ActivityMessagesBinding
@@ -25,26 +30,52 @@ import java.util.TimeZone
 
 class MessagesActivity : AppCompatActivity() {
     lateinit var binding: ActivityMessagesBinding
-    lateinit var db: MercuryDB
     lateinit var user: User
     private lateinit var messagesRecyclerView: RecyclerView
+    private lateinit var prefs: SharedPreferences
+    var tag: String = "MessagesActivity"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMessagesBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         //initialize the SQLite DB
-        if(MercuryDB.db == null) {
-            MercuryDB.db = createDB(this)
+        if(db == null) {
+            db = createDB(this)
         }
 
         App.messagesActivity = this
 
+        prefs = getSharedPreferences("mercury", Context.MODE_PRIVATE)
+        val hash = prefs.getString("user", "")
+        Log.d(tag, "Target user hash is $hash")
+        if(hash != "") {
+            user = db!!.getUserByHash(prefs.getString("user", "")!!)
+        } else {
+            finish()
+        }
+
+        Thread {
+            App.serverConnection.send("facilitateConnection")
+            App.serverConnection.send(hash)
+        }.start()
+
+        messagesRecyclerView = binding.messagesRecyclerView
         displayMessages()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        //initialize the SQLite DB
+        if(db == null) {
+            db = createDB(this)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        prefs.edit().putString("user", "").apply()
 
         App.messagesActivity = null
     }
@@ -58,17 +89,18 @@ class MessagesActivity : AppCompatActivity() {
         }
         val timestamp = System.currentTimeMillis()
 
-        val message = Message(user, true, text, timestamp)
+        val message = Message(user.hash, true, text, timestamp)
 
-        db.addMessage(message)
+        db?.addMessage(message)
 
-        App.peerSocketContainerHashMap
+        App.peerSocketContainerHashMap[user.hash]?.send(text)
+        App.peerSocketContainerHashMap[user.hash]?.send(timestamp.toString())
     }
 
     //fill the recyclerView with user entries
-    public fun displayMessages() {
-        val messages = MercuryDB.db!!.getMessages(user)
-        val llm = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+    fun displayMessages() {
+        val messages = db!!.getMessages(user)
+        val llm = LinearLayoutManager(this)
         llm.stackFromEnd = true
         messagesRecyclerView.layoutManager = llm
         messagesRecyclerView.adapter = ItemAdapter(messages)

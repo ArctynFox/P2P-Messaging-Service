@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -19,8 +21,9 @@ import com.cs496.mercurymessaging.networking.threads.ServerConnection;
 
 public class MercuryService extends Service {
     public static MercuryService singleton = null;
+    HostThread hostThread;
     public static boolean isRunning = false;
-    String tag = this.getClass().getName();
+    String tag = "MercuryService";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -44,7 +47,8 @@ public class MercuryService extends Service {
                 .setContentIntent(pendingIntent);
 
         //start the foreground service
-        startForeground(1001, notification.build());
+        startForeground(1001, notification.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+
         isRunning = true;
 
         singleton = this;
@@ -53,7 +57,8 @@ public class MercuryService extends Service {
         App.serverConnection.initialize();
 
         //create HostThread and run
-        new HostThread().start();
+        hostThread = new HostThread();
+        hostThread.start();
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -70,6 +75,9 @@ public class MercuryService extends Service {
 
         //close connection with central server
         App.serverConnection.close();
+
+        //close host peer ServerSocket
+        hostThread.interrupt();
 
         //kill the service
         stopSelf();

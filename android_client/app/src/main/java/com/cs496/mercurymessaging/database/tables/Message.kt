@@ -4,9 +4,9 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "messages", foreignKeys = [ForeignKey(entity = User::class, parentColumns = arrayOf("id"), childColumns = arrayOf("user"), onDelete = ForeignKey.CASCADE)])
+@Entity(tableName = "messages", foreignKeys = [ForeignKey(entity = User::class, parentColumns = arrayOf("hash"), childColumns = arrayOf("hash"), onDelete = ForeignKey.CASCADE)])
 class Message (
-    var user: User,
+    var hash: String,
     var isAuthor: Boolean,
     var text: String,
     var timestamp: Long

@@ -60,7 +60,7 @@ public class App
                         //accept an incoming connection and print the client's address
                         Socket socket = serverSocket.accept();
 
-                        System.out.println("Incoming connection from " + socket.getInetAddress().getHostAddress() + ", moving connecti0on to new thread.");
+                        System.out.println("Incoming connection from " + socket.getInetAddress().getHostAddress() + ", moving connection to new thread.");
 
                         //pass the client's socket to a new thread
                         ClientConnectionThread thread = new ClientConnectionThread(socket, db, Thread.activeCount());

@@ -3,13 +3,11 @@ package com.cs496.mercurymessaging.networking.threads;
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.cs496.mercurymessaging.App;
-import com.cs496.mercurymessaging.activities.MainActivity;
 import com.cs496.mercurymessaging.networking.PeerSocketContainer;
 
 import java.io.BufferedReader;
@@ -37,9 +35,9 @@ public class ServerConnection extends Thread {
     BufferedReader fromServer;
     DataOutputStream toServer;
     SecretKey aesKey;
-
     SharedPreferences prefs;
     Context context;
+    String tag = "ServerConnection";
 
     public ServerConnection(SharedPreferences prefs, Context context) {
         this.prefs = prefs;
@@ -55,6 +53,7 @@ public class ServerConnection extends Thread {
     Thread initializerThread = new Thread() {
         @Override
         public void run() {
+            Log.d(tag, "Attempting to connect to central server.");
             try {
                 connectToServer();
             } catch (IOException e) {
@@ -64,6 +63,7 @@ public class ServerConnection extends Thread {
                 return;
             }
 
+            Log.d(tag, "Opening data pathways with central server.");
             try {
                 openDataPathways();
             } catch (IOException e) {
@@ -73,6 +73,7 @@ public class ServerConnection extends Thread {
                 return;
             }
 
+            Log.d(tag, "Generating RSA key pair.");
             PublicKey publicKey;
             PrivateKey privateKey;
             try {
@@ -87,6 +88,7 @@ public class ServerConnection extends Thread {
                 return;
             }
 
+            Log.d(tag, "Exchanging RSA key pair for AES key.");
             try {
                 getAESKey(publicKey, privateKey);
             } catch (IOException e) {
@@ -96,6 +98,7 @@ public class ServerConnection extends Thread {
                 return;
             }
 
+            Log.d(tag, "Asserting the passkey for the central server.");
             try {
                 assertPassKey(new String(new char[]{'a', '$', 'F', 'f', 'G', '@', '2', '8', 'm', 's', '4', 'e'}));
             } catch (Exception e) {
@@ -105,6 +108,7 @@ public class ServerConnection extends Thread {
                 return;
             }
 
+            Log.d(tag, "Exchanging hash with central server.");
             try {
                 exchangeHash();
             } catch (Exception e) {
@@ -117,36 +121,42 @@ public class ServerConnection extends Thread {
             //(as a response to this client adding a user or opening the MessageActivity
             while (true) {
                 try {
+                    Log.d(tag, "Waiting for incoming messages from central server...");
                     String incoming = receive();
+                    Log.d(tag, "Message from central server: " + incoming);
                     if (incoming.equals("disconnect")) {
+                        Log.d(tag, "Disconnecting from central server.");
                         interrupt();
                         return;
                     }
-                    String[] connectInfo = incoming.split("\0");
+
+                    String returnHash = receive();
+                    Log.d(tag, "Central server provided hash as response: " + returnHash);
 
                     assert db != null;
                     //if the server tells the client that the given hash doesn't exist, get rid of the user entry
-                    if(connectInfo[0].equals("N/A")) {
-                        db.deleteUser(db.getUserByHash(connectInfo[1]));
+                    if(incoming.equals("N/A")) {
+                        Log.d(tag, "The hash sent didn't exist, removing user entry.");
+                        db.deleteUser(db.getUserByHash(returnHash));
 
                         //show toast informing that the given user was not found on the server
                         if(App.isMainActivity()) {
                             //if on main activity, refresh page
-                            Toast.makeText(App.mainActivity.getBaseContext(), "User " + connectInfo[1] + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(App.mainActivity.getBaseContext(), "User " + returnHash + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
                             App.mainActivity.runOnUiThread(() -> App.mainActivity.displayUserList());
-                        } else if(App.isMessagesActivity() && prefs.getString("targetUser", "N/A").equals(connectInfo[1])) {
-                            Toast.makeText(App.messagesActivity.getBaseContext(), "User " + connectInfo[1] + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
+                        } else if(App.isMessagesActivity() && prefs.getString("targetUser", "N/A").equals(returnHash)) {
+                            Toast.makeText(App.messagesActivity.getBaseContext(), "User " + returnHash + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
                             //if on target hash's messages activity change to MainActivity
-                            Intent intent = new Intent(App.messagesActivity.getBaseContext(), MainActivity.class);
-                            App.messagesActivity.getBaseContext().startActivity(intent);
+                            App.messagesActivity.finish();
                         }
                     } else {
+                        Log.d(tag, "Connecting to " + returnHash + " at " + incoming);
                         //create a ClientConnection
-                        ClientConnection clientConnection = new ClientConnection(connectInfo[0], prefs, connectInfo[1]);
+                        ClientConnection clientConnection = new ClientConnection(incoming, prefs, returnHash);
                         //create a PeerSocketContainer for it
-                        PeerSocketContainer peerSocketContainer = new PeerSocketContainer(clientConnection, db.getUserByHash(connectInfo[1]));
+                        PeerSocketContainer peerSocketContainer = new PeerSocketContainer(clientConnection, db.getUserByHash(returnHash));
                         //add it to the App.peerSocketContainerHashMap so it can be used at any time later
-                        App.peerSocketContainerHashMap.put(connectInfo[1], peerSocketContainer);
+                        App.peerSocketContainerHashMap.put(returnHash, peerSocketContainer);
                     }
 
                 } catch (Exception e) {
@@ -162,7 +172,7 @@ public class ServerConnection extends Thread {
     //open socket and try to connect to central server
     private void connectToServer() throws IOException {
         socket = new Socket();
-        socket.connect(new InetSocketAddress("192.168.1.47", 52761), 10000);
+        socket.connect(new InetSocketAddress("192.168.1.27", 52761), 10000);
     }
 
     //open the data streams to and from the server
@@ -227,13 +237,17 @@ public class ServerConnection extends Thread {
     private void exchangeHash() throws Exception {
         //get hash from prefs
         String hash = prefs.getString("hash", "N/A");
+        Log.d(tag, "Hash in prefs: " + hash);
 
         //send it
         send(hash);
 
         //if the hash was the default not available value, receive a hash and save it to prefs
         if(hash.equals("N/A")) {
-            prefs.edit().putString("hash", receive()).apply();
+            Log.d(tag, "Waiting for hash from server.");
+            String newHash = receive();
+            prefs.edit().putString("hash", newHash).apply();
+            Log.d(tag, "Received hash: " + newHash);
         }
     }
 

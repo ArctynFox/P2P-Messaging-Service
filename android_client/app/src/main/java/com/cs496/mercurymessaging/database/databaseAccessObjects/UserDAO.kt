@@ -27,7 +27,7 @@ interface UserDAO {
 
     //update a user entry
     @Query("UPDATE users SET nickname = :nickname, isConnected = :isConnected, timestamp = :timestamp WHERE hash = :hash")
-    fun updateUser(hash: String, nickname: String, isConnected: Boolean, timestamp: Long): Long
+    fun updateUser(hash: String, nickname: String, isConnected: Boolean, timestamp: Long): Int
 
     //delete a user
     @Delete

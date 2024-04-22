@@ -49,13 +49,15 @@ public class PeerSocketContainer {
     //adapter to send a message to a peer
     public void send(String text) {
         long timestamp = System.currentTimeMillis();
-        Message message = new Message(user, true, text, timestamp);
+        Message message = new Message(user.getHash(), true, text, timestamp);
 
         try {
             if(isHostPeer) {
-                hostClientThread.send(text + "\0" + timestamp);
+                hostClientThread.send(text);
+                hostClientThread.send(Long.toString(timestamp));
             } else {
-                clientConnection.send(text + "\0" + timestamp);
+                clientConnection.send(text);
+                clientConnection.send(Long.toString(timestamp));
             }
         } catch (Exception e){
             Log.d(tag, "Exception when trying to send message to " + user.getHash());
