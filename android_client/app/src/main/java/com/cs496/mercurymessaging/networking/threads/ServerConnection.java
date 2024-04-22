@@ -1,10 +1,16 @@
 package com.cs496.mercurymessaging.networking.threads;
 
+import static com.cs496.mercurymessaging.database.MercuryDB.db;
+
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.cs496.mercurymessaging.App;
+import com.cs496.mercurymessaging.activities.MainActivity;
+import com.cs496.mercurymessaging.networking.PeerSocketContainer;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -31,13 +37,13 @@ public class ServerConnection extends Thread {
     BufferedReader fromServer;
     DataOutputStream toServer;
     SecretKey aesKey;
-    Context context;
 
     SharedPreferences prefs;
+    Context context;
 
-    public ServerConnection(Context context, SharedPreferences prefs) {
-        this.context = context;
+    public ServerConnection(SharedPreferences prefs, Context context) {
         this.prefs = prefs;
+        this.context = context;
     }
 
     //TODO: any use of the Log class is android-only and should be replaced with print statements on the PC client
@@ -107,19 +113,42 @@ public class ServerConnection extends Thread {
                 interrupt();
             }
 
-            //repeatedly wait for the central server to tell this client that another client wants to connect
-            //TODO: for hole punching, but with the current TCP implementation this is useless
+            //repeatedly wait for the central server to tell this client a device to connect to
+            //(as a response to this client adding a user or opening the MessageActivity
             while (true) {
                 try {
-                    String incoming = receive(); //TODO: at the current point in time this is literally just to make sure the socket doesn't close on its own for some reason
+                    String incoming = receive();
                     if (incoming.equals("disconnect")) {
                         interrupt();
                         return;
                     }
                     String[] connectInfo = incoming.split("\0");
 
-                    //add a new client socket to the hashmap
-                    App.clientConnectionHashMap.put(connectInfo[1], new ClientConnection(connectInfo[0], context, prefs, connectInfo[1]));
+                    assert db != null;
+                    //if the server tells the client that the given hash doesn't exist, get rid of the user entry
+                    if(connectInfo[0].equals("N/A")) {
+                        db.deleteUser(db.getUserByHash(connectInfo[1]));
+
+                        //show toast informing that the given user was not found on the server
+                        if(App.isMainActivity()) {
+                            //if on main activity, refresh page
+                            Toast.makeText(App.mainActivity.getBaseContext(), "User " + connectInfo[1] + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
+                            App.mainActivity.runOnUiThread(() -> App.mainActivity.displayUserList());
+                        } else if(App.isMessagesActivity() && prefs.getString("targetUser", "N/A").equals(connectInfo[1])) {
+                            Toast.makeText(App.messagesActivity.getBaseContext(), "User " + connectInfo[1] + " was not found and has been removed.", Toast.LENGTH_SHORT).show();
+                            //if on target hash's messages activity change to MainActivity
+                            Intent intent = new Intent(App.messagesActivity.getBaseContext(), MainActivity.class);
+                            App.messagesActivity.getBaseContext().startActivity(intent);
+                        }
+                    } else {
+                        //create a ClientConnection
+                        ClientConnection clientConnection = new ClientConnection(connectInfo[0], prefs, connectInfo[1]);
+                        //create a PeerSocketContainer for it
+                        PeerSocketContainer peerSocketContainer = new PeerSocketContainer(clientConnection, db.getUserByHash(connectInfo[1]));
+                        //add it to the App.peerSocketContainerHashMap so it can be used at any time later
+                        App.peerSocketContainerHashMap.put(connectInfo[1], peerSocketContainer);
+                    }
+
                 } catch (Exception e) {
                     Log.e("ServerThread", "Failed to communicate with server.");
                     e.printStackTrace();
@@ -210,16 +239,16 @@ public class ServerConnection extends Thread {
 
     //send AES encrypted message to server
     public void send(String message) throws Exception {
-        Cipher AEScipher = Cipher.getInstance("AES/GCM/NoPadding");
+        Cipher aesCipher = Cipher.getInstance("AES/GCM/NoPadding");
 
         // Generate nonce
-        byte[] nonce = generateNonce(AEScipher.getBlockSize());
+        byte[] nonce = generateNonce(aesCipher.getBlockSize());
 
         // Initialize cipher with nonce
-        AEScipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
+        aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 
         // Encrypt message
-        byte[] encryptedMessage = AEScipher.doFinal(message.getBytes());
+        byte[] encryptedMessage = aesCipher.doFinal(message.getBytes());
 
         Base64.Encoder encoder = Base64.getEncoder();
 
@@ -266,5 +295,11 @@ public class ServerConnection extends Thread {
             Log.e("ServerThread", "Issue when trying to close socket and data streams.");
             e.printStackTrace();
         }
+    }
+
+    //safe close and kill thread
+    public void close() {
+        disconnect();
+        initializerThread.interrupt();
     }
 }

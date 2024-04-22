@@ -1,5 +1,6 @@
 package com.cs496.mercurymessaging.activities
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,11 +9,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.cs496.mercurymessaging.App
 import com.cs496.mercurymessaging.R
 import com.cs496.mercurymessaging.database.MercuryDB.Companion.createDB
 import com.cs496.mercurymessaging.database.MercuryDB.Companion.db
-import com.cs496.mercurymessaging.database.User
+import com.cs496.mercurymessaging.database.tables.User
 import com.cs496.mercurymessaging.databinding.ActivityMainBinding
+import com.cs496.mercurymessaging.networking.MercuryService
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -22,14 +25,31 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val mercuryServiceIntent = Intent(this, MercuryService::class.java)
+        startService(mercuryServiceIntent)
+
+        App.mainActivity = this
+
+        //initialize the SQLite DB
+        if(db == null) {
+            db = createDB(this)
+        }
+
         displayUserList()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        App.mainActivity = null;
+    }
+
     //fill the recyclerView with user entries
-    private fun displayUserList() {
-        db = createDB(this)
-        val users = db.getUsers()
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+    public fun displayUserList() {
+        val users = db!!.getUsers()
+        val llm = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        llm.stackFromEnd = true
+        recyclerView.layoutManager = llm
         recyclerView.adapter = ItemAdapter(users)
     }
 
@@ -53,12 +73,14 @@ class MainActivity : AppCompatActivity() {
         //using the bindings above, fill the given view holder with the respective data
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
             val item = userList[position]
-            holder.itemView.tag = item.id
+            holder.itemView.tag = item.hash
             holder.username.text = item.nickname
         }
     }
 
     fun onAddUserClick(v: View) {
         //go to add user screen
+        val intent = Intent(this, AddUserActivity::class.java)
+        startActivity(intent)
     }
 }

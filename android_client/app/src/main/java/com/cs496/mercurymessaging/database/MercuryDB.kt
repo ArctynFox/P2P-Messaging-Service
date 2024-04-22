@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.cs496.mercurymessaging.database.databaseAccessObjects.MessageDAO
+import com.cs496.mercurymessaging.database.databaseAccessObjects.UserDAO
+import com.cs496.mercurymessaging.database.tables.Message
+import com.cs496.mercurymessaging.database.tables.User
 
 @Database(entities = [User::class, Message::class], version = 1)
 abstract class MercuryDB : RoomDatabase() {
@@ -32,6 +36,7 @@ abstract class MercuryDB : RoomDatabase() {
 
     //insert message
     fun addMessage(message: Message): Long {
+        updateUser(message.user.hash, message.user.nickname, message.user.isConnected, System.currentTimeMillis())
         return messageDao().addMessage(message)
     }
 
@@ -46,8 +51,8 @@ abstract class MercuryDB : RoomDatabase() {
     }
 
     //update user
-    fun updateUser(id: Long, ip: String, nickname: String, isConnected: Boolean): Long {
-        return userDao().updateUser(id, ip, nickname, isConnected)
+    fun updateUser(hash: String, nickname: String, isConnected: Boolean, timestamp: Long): Long {
+        return userDao().updateUser(hash, nickname, isConnected, timestamp)
     }
 
     //get all users
@@ -55,8 +60,8 @@ abstract class MercuryDB : RoomDatabase() {
         return userDao().getAllUsers()
     }
 
-    fun getUserByID(id: Long): User {
-        return userDao().getUser(id)
+    fun deleteUser(user: User) {
+        return userDao().deleteUser(user);
     }
 
     fun getUserByHash(hash: String): User {

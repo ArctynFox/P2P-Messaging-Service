@@ -2,6 +2,8 @@ package com.cs496.mercurymessaging.networking.threads;
 
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
+import com.cs496.mercurymessaging.App;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -21,6 +23,8 @@ public class HostThread extends Thread {
             return;
         }
 
+        App.hostThread = this;
+
         //accept connections indefinitely not exceeding a defined number
         int maxThreads = 1000;
         while(true) {
@@ -33,7 +37,7 @@ public class HostThread extends Thread {
                     System.out.println("Incoming connection from " + socket.getInetAddress().getHostAddress() + ", moving connecti0on to new thread.");
 
                     //pass the client's socket to a new thread
-                    HostClientThread thread = new HostClientThread(socket, db);
+                    HostClientThread thread = new HostClientThread(socket);
                     thread.start();
                 } catch (IOException e) {
                     try {
@@ -53,6 +57,7 @@ public class HostThread extends Thread {
     public void interrupt() {
         try {
             serverSocket.close();
+            App.hostThread = null;
         } catch (IOException e) {
             System.out.println("Could not close server on interrupt.");
             e.printStackTrace();

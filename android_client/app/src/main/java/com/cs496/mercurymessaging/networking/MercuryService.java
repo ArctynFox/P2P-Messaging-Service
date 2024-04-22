@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 
 import com.cs496.mercurymessaging.App;
 import com.cs496.mercurymessaging.activities.MainActivity;
+import com.cs496.mercurymessaging.networking.threads.HostThread;
 import com.cs496.mercurymessaging.networking.threads.ServerConnection;
 
 public class MercuryService extends Service {
@@ -48,10 +49,11 @@ public class MercuryService extends Service {
 
         singleton = this;
 
-        App.serverConnection = new ServerConnection(this, getSharedPreferences("mercury", Context.MODE_PRIVATE));
+        App.serverConnection = new ServerConnection(getSharedPreferences("mercury", Context.MODE_PRIVATE), this);
         App.serverConnection.initialize();
 
         //create HostThread and run
+        new HostThread().start();
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -60,6 +62,16 @@ public class MercuryService extends Service {
     public void onDestroy() {
         isRunning = false;
         singleton = null;
+
+        //close all peer sockets
+        for(PeerSocketContainer peerSocketContainer : App.peerSocketContainerHashMap.values()) {
+            peerSocketContainer.disconnect();
+        }
+
+        //close connection with central server
+        App.serverConnection.close();
+
+        //kill the service
         stopSelf();
     }
 

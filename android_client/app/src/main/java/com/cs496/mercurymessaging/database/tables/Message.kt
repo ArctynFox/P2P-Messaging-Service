@@ -1,18 +1,15 @@
-package com.cs496.mercurymessaging.database
+package com.cs496.mercurymessaging.database.tables
 
-import androidx.annotation.NonNull
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import java.io.File
 
 @Entity(tableName = "messages", foreignKeys = [ForeignKey(entity = User::class, parentColumns = arrayOf("id"), childColumns = arrayOf("user"), onDelete = ForeignKey.CASCADE)])
 class Message (
     var user: User,
     var isAuthor: Boolean,
     var text: String,
-    var timestamp: Long,
-    var file: File? = null
+    var timestamp: Long
         ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0

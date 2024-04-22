@@ -1,10 +1,12 @@
-package com.cs496.mercurymessaging.database
+package com.cs496.mercurymessaging.database.databaseAccessObjects
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.cs496.mercurymessaging.database.tables.Message
+import com.cs496.mercurymessaging.database.tables.User
 
 @Dao
 interface MessageDAO {

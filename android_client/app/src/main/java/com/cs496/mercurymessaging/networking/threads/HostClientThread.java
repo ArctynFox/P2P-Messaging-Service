@@ -1,10 +1,13 @@
 package com.cs496.mercurymessaging.networking.threads;
 
+import static com.cs496.mercurymessaging.database.MercuryDB.db;
+
 import android.util.Log;
 
-import com.cs496.mercurymessaging.database.MercuryDB;
-import com.cs496.mercurymessaging.database.Message;
-import com.cs496.mercurymessaging.database.User;
+import com.cs496.mercurymessaging.App;
+import com.cs496.mercurymessaging.database.tables.Message;
+import com.cs496.mercurymessaging.database.tables.User;
+import com.cs496.mercurymessaging.networking.PeerSocketContainer;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -23,26 +26,25 @@ import java.util.Objects;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 public class HostClientThread extends Thread {
     Socket socket;
     DataOutputStream out;
     BufferedReader in;
-    Key aesKey;
+    SecretKey aesKey;
     User user;
-    MercuryDB db;
     String tag = this.getClass().getName();
 
-    HostClientThread(Socket socket, MercuryDB db) {
+    HostClientThread(Socket socket) {
         this.socket = socket;
-        this.db = db;
     }
 
     @Override
     public void run() {
         try {
-            //open the input and output streams with the client
+            //open the input and output streams with the client peer
             try {
                 out = new DataOutputStream(socket.getOutputStream());
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -58,7 +60,7 @@ public class HostClientThread extends Thread {
             String publicKeyString = in.readLine();
             byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            PublicKey publicKey = (PublicKey) keyFactory.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
+            PublicKey publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
 
             //generate AES key to send back
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
@@ -70,23 +72,30 @@ public class HostClientThread extends Thread {
             String aesKeyString = new String(Base64.getEncoder().encode(encryptedAESKey));
             out.writeBytes(aesKeyString + "\n");
 
-            //receive the connected client's user hash
+            //receive the connected client peer's user hash
             String userHash = receive();
 
             //get or create the user's db entry
+            assert db != null;
             if(!db.doesUserExist(userHash)) {
-                user = new User(userHash, Objects.requireNonNull(socket.getInetAddress().getHostAddress()), "", true);
+                user = new User(userHash, Objects.requireNonNull(socket.getInetAddress().getHostAddress()), true, Long.MAX_VALUE);
                 db.addUser(user);
             } else {
                 user = db.getUserByHash(userHash);
             }
+
+            App.peerSocketContainerHashMap.put(userHash, new PeerSocketContainer(this, user));
 
             //keep listening to client peer until disconnected
             while(true) {
                 String incoming = receive();
 
                 if(incoming.equals("disconnect")) {
-                    interrupt();
+                    PeerSocketContainer peerSocketContainer = App.peerSocketContainerHashMap.get(user.getHash());
+                    if(peerSocketContainer != null) {
+                        peerSocketContainer.disconnect();
+                    } else interrupt();
+                    return;
                 }
 
                 print("Received a message from " + user.getHash() + ".");
@@ -95,7 +104,7 @@ public class HostClientThread extends Thread {
 
                 print("Incoming message: " + messageInfo[0]);
 
-                Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]), null);
+                Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]));
 
                 db.addMessage(message);
             }

@@ -2,14 +2,13 @@ package com.cs496.mercurymessaging.networking.threads;
 
 import static com.cs496.mercurymessaging.database.MercuryDB.db;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.cs496.mercurymessaging.App;
-import com.cs496.mercurymessaging.database.MercuryDB;
-import com.cs496.mercurymessaging.database.Message;
-import com.cs496.mercurymessaging.database.User;
+import com.cs496.mercurymessaging.database.tables.Message;
+import com.cs496.mercurymessaging.database.tables.User;
+import com.cs496.mercurymessaging.networking.PeerSocketContainer;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -35,31 +34,29 @@ public class ClientConnection {
     BufferedReader fromServer;
     DataOutputStream toServer;
     SecretKey aesKey;
-    Context context;
     SharedPreferences prefs;
     User user;
     String tag = this.getClass().getName();
 
-    public ClientConnection(String address, Context context, SharedPreferences prefs, String hash) throws IOException {
+    public ClientConnection(String address, SharedPreferences prefs, String hash) {
         initialize(address);
-        this.context = context;
         this.prefs = prefs;
 
-        if(db == null) {
-            MercuryDB.Companion.createDB(context);
-        }
+        assert db != null;
 
         this.user = db.getUserByHash(hash);
+
+        App.peerSocketContainerHashMap.put(hash, new PeerSocketContainer(this, user));
     }
 
-    public void initialize(String ip) {
+    public boolean initialize(String ip) {
         try {
             connectToServer(ip);
         } catch (IOException e) {
             Log.e(tag, "Failure to connect to server.");
             e.printStackTrace();
             disconnect();
-            return;
+            return false;
         }
 
         try {
@@ -68,7 +65,7 @@ public class ClientConnection {
             Log.e(tag, "Failed to open data streams with server.");
             e.printStackTrace();
             disconnect();
-            return;
+            return false;
         }
 
         PublicKey publicKey;
@@ -82,7 +79,7 @@ public class ClientConnection {
             Log.e(tag, "Unrecognized RSA algorithm.");
             e.printStackTrace();
             disconnect();
-            return;
+            return false;
         }
 
         try {
@@ -91,11 +88,7 @@ public class ClientConnection {
             Log.e(tag, "Failed to send or receive data with server when exchanging RSA key for AES key.");
             e.printStackTrace();
             disconnect();
-            return;
-        }
-
-        if(db == null) {
-            MercuryDB.Companion.createDB(context);
+            return false;
         }
 
         try {
@@ -105,6 +98,7 @@ public class ClientConnection {
         }
 
         receiveMessageThread.start();
+        return true;
     }
 
     //thread that just listens for incoming messages and puts them in the database, and tells the UI to update if on the respective message screen
@@ -116,14 +110,18 @@ public class ClientConnection {
                     String incoming = receive();
 
                     if(incoming.equals("disconnect")) {
-                        disconnect();
+                        PeerSocketContainer peerSocketContainer = App.peerSocketContainerHashMap.get(user.getHash());
+                        if(peerSocketContainer != null) {
+                            peerSocketContainer.disconnect();
+                        } else disconnect();
+                        return;
                     }
 
                     Log.d(tag, "Received a message from " + user.getHash() + ".");
 
                     String[] messageInfo = incoming.split("\0");
 
-                    Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]), null);
+                    Message message = new Message(user, false, messageInfo[0], Long.parseLong(messageInfo[1]));
 
                     assert db != null;
                     db.addMessage(message);
@@ -242,7 +240,7 @@ public class ClientConnection {
     //safe close data pathways and remove itself from the client hashmap
     public void disconnect() {
         try {
-            App.clientConnectionHashMap.remove(user.getHash());
+            receiveMessageThread.interrupt();
             toServer.close();
             fromServer.close();
             socket.close();
