@@ -1,6 +1,6 @@
 # Functional Requirements/Attributes
 ## Clients
-- [x] Clients should only need to communicate with a central server to find peers and facilitate [hole-punching](https://github.com/KunjanThadani/holepunchsample/) (or assume that all clients have a listening port forwarded[^1]). For the sake of the project deadline, we are assuming clients are port-forwarded or reachable.
+- [x] Clients should only need to communicate with a central server to find peers ~~and facilitate [hole-punching](https://github.com/KunjanThadani/holepunchsample/) (or assume that all clients have a listening port forwarded[^1]).~~ For the sake of the project deadline, we are assuming clients are port-forwarded or reachable.
 - [x] Messages between clients should *never* go through any sort of central or relay server.
 - [x] All messages should be encrypted to facilitate secure transfer of data.
 - [x] Clients should be able to pair with each other to start messaging via a user ID
