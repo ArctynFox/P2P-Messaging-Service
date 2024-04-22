@@ -89,11 +89,6 @@ class MessagesActivity : AppCompatActivity() {
             Toast.makeText(this, "This message is not valid.", Toast.LENGTH_SHORT).show()
             return
         }
-        val timestamp = System.currentTimeMillis()
-
-        val message = Message(user.hash, true, text, timestamp)
-
-        db?.addMessage(message)
 
         Thread {
             App.peerSocketContainerHashMap[user.hash]?.send(text)
