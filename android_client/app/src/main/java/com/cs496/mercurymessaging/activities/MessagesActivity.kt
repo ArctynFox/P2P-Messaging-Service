@@ -103,7 +103,7 @@ class MessagesActivity : AppCompatActivity() {
             holder.timestamp.text = sdf.format(item.timestamp + tzOffset)
 
             if(item.isAuthor) {
-                holder.background.setBackgroundColor(Color.parseColor("#93fa9a"))
+                holder.background.setBackgroundColor(Color.parseColor("#e6f2ff"))
             } else {
                 holder.background.setBackgroundColor(Color.parseColor("#ffb0ad"))
             }
