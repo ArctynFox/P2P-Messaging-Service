@@ -6,6 +6,7 @@ The IP and port of the central server will need to be modified based on the serv
 
 ## Build Instructions
 
-1. Install Android Studio (we used Flamingo 2022.2.1 Patch 2)
-2. Clean and rebuild project, then build an APK or directly to a device.
+1. Install the latest version of Android Studio.
+2. Open the android_client folder as a project.
+2. Clean and rebuild project, then build an APK or install directly to a device.
 3. Run the Mercury Messaging app.
