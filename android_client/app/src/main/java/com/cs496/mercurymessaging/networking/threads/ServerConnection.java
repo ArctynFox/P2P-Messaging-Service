@@ -118,7 +118,7 @@ public class ServerConnection extends Thread {
             }
 
             //repeatedly wait for the central server to tell this client a device to connect to
-            //(as a response to this client adding a user or opening the MessageActivity
+            //(as a response to this client adding a user or opening the MessageActivity)
             while (true) {
                 try {
                     Log.d(tag, "Waiting for incoming messages from central server...");
@@ -254,25 +254,27 @@ public class ServerConnection extends Thread {
 
     //send AES encrypted message to server
     public void send(String message) throws Exception {
-        Cipher aesCipher = Cipher.getInstance("AES/GCM/NoPadding");
+        if(socket.isConnected()) {
+            Cipher aesCipher = Cipher.getInstance("AES/GCM/NoPadding");
 
-        // Generate nonce
-        byte[] nonce = generateNonce(aesCipher.getBlockSize());
+            // Generate nonce
+            byte[] nonce = generateNonce(aesCipher.getBlockSize());
 
-        // Initialize cipher with nonce
-        aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
+            // Initialize cipher with nonce
+            aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(128, nonce));
 
-        // Encrypt message
-        byte[] encryptedMessage = aesCipher.doFinal(message.getBytes());
+            // Encrypt message
+            byte[] encryptedMessage = aesCipher.doFinal(message.getBytes());
 
-        Base64.Encoder encoder = Base64.getEncoder();
+            Base64.Encoder encoder = Base64.getEncoder();
 
-        // Concatenate nonce and encrypted message
-        String encryptedEncodedMessage = encoder.encodeToString(nonce) + ":" +
-                encoder.encodeToString(encryptedMessage);
+            // Concatenate nonce and encrypted message
+            String encryptedEncodedMessage = encoder.encodeToString(nonce) + ":" +
+                    encoder.encodeToString(encryptedMessage);
 
-        toServer.writeBytes(encryptedEncodedMessage + '\n');
-        toServer.flush();
+            toServer.writeBytes(encryptedEncodedMessage + '\n');
+            toServer.flush();
+        }
     }
 
     //get AES encrypted message from server

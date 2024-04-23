@@ -16,14 +16,16 @@ public class PeerSocketContainer {
     HostClientThread hostClientThread;
     User user;
     boolean isHostPeer;
-    String tag = this.getClass().getName();
+    String tag = "PeerSocketContainer";
 
+    //PeerSocketContainer constructor for ClientConnections
     public PeerSocketContainer(ClientConnection clientConnection, User user) {
         this.clientConnection = clientConnection;
         this.user = user;
         isHostPeer = false;
     }
 
+    //PeerSocketContainer constructor for HostClientThreads
     public PeerSocketContainer(HostClientThread hostClientThread, User user) {
         this.hostClientThread = hostClientThread;
         this.user = user;

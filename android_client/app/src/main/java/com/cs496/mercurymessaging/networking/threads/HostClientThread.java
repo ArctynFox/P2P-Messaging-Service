@@ -117,16 +117,22 @@ public class HostClientThread extends Thread {
                     return;
                 }
 
+                //anything else is an incoming message
+
+                //receive the timestamp of the message from the sending peer
                 String timestamp = receive();
 
                 Log.d(tag, "Received a message from " + user.getHash() + ".");
                 Log.d(tag, "Incoming message: " + incoming);
 
+                //create a message object for the message
                 Message message = new Message(user.getHash(), false, incoming, Long.parseLong(timestamp));
 
+                //add the message to the database
                 db.addMessage(message);
                 print("Message added to database.");
 
+                //refresh the message screen if on the target user's message list
                 if(App.isMessagesActivity()) {
                     if(App.messagesActivity.user.getHash().equals(message.getHash())) {
                         App.messagesActivity.runOnUiThread(() -> App.messagesActivity.displayMessages());

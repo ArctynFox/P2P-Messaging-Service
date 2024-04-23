@@ -17,6 +17,7 @@ public class App {
     public static MainActivity mainActivity = null;
     public static MessagesActivity messagesActivity = null;
 
+    //own user hash to be accessed by sockets
     public static String hash = null;
 
 
@@ -30,10 +31,11 @@ public class App {
         return messagesActivity != null;
     }
 
+    //references to the central server connection thread and host peer thread
     public static ServerConnection serverConnection = null;
     public static HostThread hostThread = null;
 
     //hashmap that contains PeerSocketContainers which reference either a ClientConnection or HostClientThread depending on how it was created
-    //used to send messages at any time
+    //used to send messages at any time with easy reference to the respective socket
     public static HashMap<String, PeerSocketContainer> peerSocketContainerHashMap = new HashMap<>();
 }

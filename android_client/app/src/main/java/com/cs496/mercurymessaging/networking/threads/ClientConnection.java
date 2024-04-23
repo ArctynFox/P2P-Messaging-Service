@@ -54,6 +54,7 @@ public class ClientConnection {
     }
 
     public boolean initialize(String ip) {
+        //open socket with server
         try {
             connectToServer(ip);
         } catch (IOException e) {
@@ -63,6 +64,7 @@ public class ClientConnection {
             return false;
         }
 
+        //get references to the input and output streams for the socket
         try {
             openDataPathways();
         } catch (IOException e) {
@@ -72,6 +74,7 @@ public class ClientConnection {
             return false;
         }
 
+        //generate an RSA key pair
         PublicKey publicKey;
         PrivateKey privateKey;
         try {
@@ -86,6 +89,8 @@ public class ClientConnection {
             return false;
         }
 
+
+        //exchange the RSA key pair with the host peer for an AES key
         try {
             getAESKey(publicKey, privateKey);
         } catch (IOException e) {
@@ -95,6 +100,7 @@ public class ClientConnection {
             return false;
         }
 
+        //send own user hash to the peer to indicate what user entry to attribute messages to
         try {
             send(App.hash);
         } catch (Exception e) {
@@ -104,11 +110,12 @@ public class ClientConnection {
             return false;
         }
 
+        //start a thread that endlessly listens for incoming messages from the host peer
         receiveMessageThread.start();
         return true;
     }
 
-    //thread that just listens for incoming messages and puts them in the database, and tells the UI to update if on the respective message screen
+    //thread that listens for incoming messages and puts them in the database, and tells the UI to update if on the respective message screen
     Thread receiveMessageThread = new Thread() {
         @Override
         public void run() {
@@ -116,6 +123,7 @@ public class ClientConnection {
                 try {
                     String incoming = receive();
 
+                    //if the host peer says to disconnect, disconnect and remove this socket container from the app's hash map
                     if(incoming.equals("disconnect")) {
                         PeerSocketContainer peerSocketContainer = App.peerSocketContainerHashMap.get(user.getHash());
                         if(peerSocketContainer != null) {
@@ -125,26 +133,31 @@ public class ClientConnection {
                         //if the app is on the target user's message screen
                         if(App.isMessagesActivity()) {
                             if(App.messagesActivity.user == user) {
-                                //intents that are passed to startActivity open a different screen
+                                //intents that are passed to messageActivity open a different screen
                                 Intent intent = new Intent(App.messagesActivity.getBaseContext(), MainActivity.class);
                                 App.messagesActivity.startActivity(intent);
                             }
                         }
-
                         return;
                     }
 
+                    //anything else coming in is a chat message
+
+                    //receive the timestamp for the given message
                     String timestamp = receive();
 
                     Log.d(tag, "Received a message from " + user.getHash() + ".");
                     Log.d(tag, "Incoming message: " + incoming);
 
+                    //create a message object for the incoming message
                     Message message = new Message(user.getHash(), false, incoming, Long.parseLong(timestamp));
 
+                    //add the message to the database
                     assert db != null;
                     db.addMessage(message);
                     Log.d(tag, "Message added to database.");
 
+                    //refresh the message screen if on the target user's message list
                     if(App.isMessagesActivity()) {
                         if(App.messagesActivity.user.getHash().equals(message.getHash())) {
                             App.messagesActivity.runOnUiThread(() -> App.messagesActivity.displayMessages());

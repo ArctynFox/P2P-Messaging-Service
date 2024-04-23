@@ -30,12 +30,6 @@ public class HostThread extends Thread {
         Log.d(tag, "ServerSocket created.");
         //accept connections indefinitely not exceeding a defined number
         int maxThreads = 100;
-        /*try {
-            Socket socketTest = serverSocket.accept();
-            Log.d(tag, "Accepted an incoming client peer.");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }*/
         while(currentThreads < maxThreads) {
             try {
                 Log.d(tag, "Waiting for incoming connections...");
