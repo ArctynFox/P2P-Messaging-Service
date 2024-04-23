@@ -42,25 +42,30 @@ class AddUserActivity: AppCompatActivity() {
         Log.d(tag, "Add user button was clicked.")
         if(binding.nicknameEdit.text.equals("")) {
             Toast.makeText(this, "Nickname field must not be empty.", Toast.LENGTH_SHORT).show()
-        } else if (binding.hashEdit.text.length != 32){
-            Toast.makeText(this, "Hash field must be 32 characters.", Toast.LENGTH_SHORT).show()
         } else {
             //add a user entry
             val hash = binding.hashEdit.text.toString()
-            val user = User(hash, binding.nicknameEdit.text.toString(), false, 0)
-            db?.addUser(user)
+            if(db?.doesUserExist(hash) != true) {
+                val user = User(hash, binding.nicknameEdit.text.toString(), false, 0)
+                db!!.addUser(user)
 
-            Log.d(tag, "Hash: $hash")
+                Log.d(tag, "Hash: $hash")
 
-            //ask the server for the user's IP
-            Log.d(tag, "$hash entered, asking central server for IP.")
-            Thread {
-                App.serverConnection.send("facilitateConnection")
-                App.serverConnection.send(hash)
-            }.start()
-            //the response is handled in ServerConnection
-            App.mainActivity.displayUserList()
-            finish()
+                //ask the server for the user's IP
+                Log.d(tag, "$hash entered, asking central server for IP.")
+                Thread {
+                    App.serverConnection.send("facilitateConnection")
+                    App.serverConnection.send(hash)
+                }.start()
+                //the response is handled in ServerConnection
+                App.mainActivity.displayUserList()
+                finish()
+            } else {
+                val user: User = db!!.getUserByHash(hash)
+                db?.updateUser(user.hash, binding.nicknameEdit.text.toString(), user.isConnected, user.timestamp)
+                App.mainActivity.displayUserList()
+                finish();
+            }
         }
     }
 }

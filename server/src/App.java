@@ -33,7 +33,7 @@ public class App
         char[] pwd = cons.readPassword("%s", "Password: ");
 
         //connect to the MySQL server
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/server_data", user, new String(pwd));
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/server_data?autoReconnect=true", user, new String(pwd));
     }
 
     static Thread serverThread = new Thread() {

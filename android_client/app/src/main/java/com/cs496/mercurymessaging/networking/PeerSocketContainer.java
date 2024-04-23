@@ -72,5 +72,11 @@ public class PeerSocketContainer {
 
         assert db != null;
         db.addMessage(message);
+
+        if(App.isMessagesActivity()) {
+            if(App.messagesActivity.user.getHash().equals(message.getHash())) {
+                App.messagesActivity.runOnUiThread(() -> App.messagesActivity.displayMessages());
+            }
+        }
     }
 }

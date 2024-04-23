@@ -86,10 +86,14 @@ public class HostClientThread extends Thread {
             assert db != null;
             if(!db.doesUserExist(userHash)) {
                 print("Client peer has never connected before. Adding user entry to db.");
-                user = new User(userHash, Objects.requireNonNull(socket.getInetAddress().getHostAddress()), true, Long.MAX_VALUE);
+                user = new User(userHash, userHash, true, Long.MAX_VALUE);
                 db.addUser(user);
             } else {
                 user = db.getUserByHash(userHash);
+            }
+
+            if(App.isMainActivity()) {
+                App.mainActivity.runOnUiThread(() -> App.mainActivity.displayUserList());
             }
 
             App.peerSocketContainerHashMap.put(userHash, new PeerSocketContainer(this, user));

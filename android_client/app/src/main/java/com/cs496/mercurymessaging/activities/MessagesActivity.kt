@@ -95,8 +95,6 @@ class MessagesActivity : AppCompatActivity() {
         }.start()
 
         binding.messageEdit.setText("")
-
-        displayMessages()
     }
 
     //fill the recyclerView with user entries

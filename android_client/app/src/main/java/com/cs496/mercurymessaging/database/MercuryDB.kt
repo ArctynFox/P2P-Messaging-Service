@@ -36,7 +36,8 @@ abstract class MercuryDB : RoomDatabase() {
 
     //insert message
     fun addMessage(message: Message): Long {
-        //updateUser(message.hash, message.nickname, message.user.isConnected, System.currentTimeMillis())
+        val user: User = getUserByHash(message.hash)
+        updateUser(user.hash, user.nickname, user.isConnected, System.currentTimeMillis())
         return messageDao().addMessage(message)
     }
 

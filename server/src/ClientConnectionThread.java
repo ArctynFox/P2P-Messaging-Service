@@ -289,10 +289,16 @@ public class ClientConnectionThread extends Thread {
     //create an identifier hash when a new user joins the network
     String generateUserHash() throws NoSuchAlgorithmException {
         //securely generate a string of 32 random characters
-        String SALTCHARS = "abcdefghijklmnopqrstuvwxyz1234567890";
+        String SALTCHARS = "abcdef1234567890";
 		StringBuilder salt = new StringBuilder();
 		SecureRandom rnd = new SecureRandom();
-		while (salt.length() < 32) {
+        while (salt.length() < 8) {
+			int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+			salt.append(SALTCHARS.charAt(index));
+		}
+		String saltStr = salt.toString();
+        //version that actually uses MD5 to generate hash strings 32 characters long... not used right now because it's just a pain to type out long hashes
+		/*while (salt.length() < 32) {
 			int index = (int) (rnd.nextFloat() * SALTCHARS.length());
 			salt.append(SALTCHARS.charAt(index));
 		}
@@ -305,9 +311,9 @@ public class ClientConnectionThread extends Thread {
         String hash = signum.toString(16);
         while(hash.length() < 32) {
             hash = "0" + hash;
-        }
+        }*/
 
-        return hash;
+        return saltStr;
     }
 
     //adapter to shorthand a print statement and include the thread's ID

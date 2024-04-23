@@ -8,6 +8,6 @@ class User (
     @PrimaryKey
     var hash: String = "",
     var nickname: String = "",
-    var isConnected: Boolean = false,
+    var isConnected: Boolean = false, //currently unused
     var timestamp: Long = Long.MAX_VALUE
 )

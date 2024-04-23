@@ -10,7 +10,7 @@ import com.cs496.mercurymessaging.database.tables.User
 @Dao
 interface UserDAO {
     //get a list of all the known users
-    @Query("SELECT * FROM users ORDER BY nickname")
+    @Query("SELECT * FROM users ORDER BY timestamp DESC")
     fun getAllUsers(): List<User>
 
     //get a user by hash
