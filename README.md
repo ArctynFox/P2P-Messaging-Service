@@ -40,9 +40,11 @@
 
 | ID  |            User Hash             | Nickname  |
 | :-: | :------------------------------: | --------- |
-|  1  | e2d38e18759ea68bace101ab39d62e41 | Andrea    |
+|  1  | e2d38e18759ea68bace101ab39d62e41* | Andrea    |
 |  2  | 1c1eb4329e9b82168baaaa84b065209f | Travis    |
 |  3  | 3889ede791c6872162ed0ab8ce513cd7 | Spam Risk |
+
+`*The current code uses 8-character hashes instead on both client and server for simplicity`
 
 >Clients should store their own user hash cached somewhere.
 
